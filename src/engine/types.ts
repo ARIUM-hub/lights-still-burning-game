@@ -52,6 +52,8 @@ export interface Condition {
   flagsNone?: string[]
   statMin?: Partial<Record<StatKey, number>>
   statMax?: Partial<Record<StatKey, number>>
+  relationMin?: Partial<Record<RelationKey, number>>
+  relationMax?: Partial<Record<RelationKey, number>>
 }
 
 export interface NodeVariant {

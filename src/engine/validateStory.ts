@@ -1,4 +1,6 @@
-import type { StoryNode } from './types'
+import { createInitialProgress } from './initialState'
+import { applyChoice, linesFor, resolveEnding } from './storyEngine'
+import type { EndingId, StoryNode, StoryProgress } from './types'
 
 export function buildStory(nodes: StoryNode[]): Record<string, StoryNode> {
   const story = Object.create(null) as Record<string, StoryNode>
@@ -26,6 +28,13 @@ export function validateStory(story: Record<string, StoryNode>): string[] {
   for (const [key, node] of Object.entries(story)) {
     if (key !== node.id) {
       errors.push(`节点键 ${key} 与节点 ID ${node.id} 不一致`)
+    }
+
+    if (node.resolveEnding && node.next !== undefined) {
+      errors.push(`结局解析节点 ${node.id} 不能设置 next`)
+    }
+    if (node.resolveEnding && node.choices !== undefined) {
+      errors.push(`结局解析节点 ${node.id} 不能设置 choices`)
     }
 
     const nextIds = successors(node)
@@ -68,8 +77,11 @@ export function validateStory(story: Record<string, StoryNode>): string[] {
   return errors
 }
 
-function nodeCharacterCount(node: StoryNode): number {
-  return node.lines.reduce(
+function nodeCharacterCount(
+  node: StoryNode,
+  progress: StoryProgress,
+): number {
+  return linesFor(node, progress).reduce(
     (total, line) => total + (line.speaker?.length ?? 0) + line.text.length,
     0,
   )
@@ -77,7 +89,7 @@ function nodeCharacterCount(node: StoryNode): number {
 
 export function enumeratePathCharacterCounts(
   story: Record<string, StoryNode>,
-  terminalCharacters: number,
+  terminalCharacters: Record<EndingId, number>,
 ): number[] {
   if (!story.act1_opening) {
     throw new Error('无法枚举路线：缺少 act1_opening')
@@ -85,14 +97,19 @@ export function enumeratePathCharacterCounts(
 
   const counts: number[] = []
 
-  const visit = (nodeId: string, total: number, path: Set<string>) => {
+  const visit = (
+    nodeId: string,
+    total: number,
+    path: Set<string>,
+    progress: StoryProgress,
+  ) => {
     const node = story[nodeId]
     if (!node) throw new Error(`无法枚举路线：节点 ${nodeId} 不存在`)
     if (path.has(nodeId)) throw new Error(`剧情图存在循环：${nodeId}`)
 
-    const nextTotal = total + nodeCharacterCount(node)
+    const nextTotal = total + nodeCharacterCount(node, progress)
     if (node.resolveEnding) {
-      counts.push(nextTotal + terminalCharacters)
+      counts.push(nextTotal + terminalCharacters[resolveEnding(progress)])
       return
     }
 
@@ -102,9 +119,25 @@ export function enumeratePathCharacterCounts(
     }
 
     const nextPath = new Set(path).add(nodeId)
-    for (const nextId of nextIds) visit(nextId, nextTotal, nextPath)
+    if (node.choices?.length) {
+      for (const choice of node.choices) {
+        visit(
+          choice.next,
+          nextTotal,
+          nextPath,
+          applyChoice(progress, choice),
+        )
+      }
+      return
+    }
+
+    visit(node.next!, nextTotal, nextPath, {
+      ...progress,
+      nodeId: node.next!,
+      lineIndex: 0,
+    })
   }
 
-  visit('act1_opening', 0, new Set())
+  visit('act1_opening', 0, new Set(), createInitialProgress())
   return counts
 }

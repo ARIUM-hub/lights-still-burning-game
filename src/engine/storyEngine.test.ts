@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { story } from '../story'
 import { createInitialProgress, createInitialSave } from './initialState'
 import { applyChoice, linesFor, matches, resolveEnding } from './storyEngine'
 import type { Choice, Condition, StoryNode } from './types'
@@ -177,6 +178,48 @@ describe('matches', () => {
       }),
     ).toBe(true)
   })
+
+  it.each<{
+    name: string
+    condition: Condition
+    openness: number
+    expected: boolean
+  }>([
+    {
+      name: '关系值等于 relationMin 边界时匹配',
+      condition: { relationMin: { dazhuangOpenness: 2 } },
+      openness: 2,
+      expected: true,
+    },
+    {
+      name: '关系值低于 relationMin 边界时不匹配',
+      condition: { relationMin: { dazhuangOpenness: 2 } },
+      openness: 1,
+      expected: false,
+    },
+    {
+      name: '关系值等于 relationMax 边界时匹配',
+      condition: { relationMax: { dazhuangOpenness: 2 } },
+      openness: 2,
+      expected: true,
+    },
+    {
+      name: '关系值高于 relationMax 边界时不匹配',
+      condition: { relationMax: { dazhuangOpenness: 2 } },
+      openness: 3,
+      expected: false,
+    },
+  ])('$name', ({ condition, openness, expected }) => {
+    const relationProgress = {
+      ...createInitialProgress(),
+      relations: {
+        ...createInitialProgress().relations,
+        dazhuangOpenness: openness,
+      },
+    }
+
+    expect(matches(relationProgress, condition)).toBe(expected)
+  })
 })
 
 describe('linesFor', () => {
@@ -216,6 +259,113 @@ describe('linesFor', () => {
 
     expect(linesFor(node, progress)).toBe(node.lines)
   })
+
+  const textAfterChoice = (
+    choiceNodeId: string,
+    choiceId: string,
+    targetNodeId: string,
+  ) => {
+    const choice = story[choiceNodeId].choices?.find(
+      (candidate) => candidate.id === choiceId,
+    )
+    if (!choice) throw new Error(`测试选择不存在：${choiceId}`)
+
+    return linesFor(
+      story[targetNodeId],
+      applyChoice(createInitialProgress(choiceNodeId), choice),
+    )
+      .map((line) => line.text)
+      .join('')
+  }
+
+  it('第一幕勇气与自我否定会改变顾客冲突的内心文本', () => {
+    const courageText = textAfterChoice(
+      'act1_cover_shift',
+      'ask-reason',
+      'act1_customer',
+    )
+    const selfDenialText = textAfterChoice(
+      'act1_cover_shift',
+      'accept-shift',
+      'act1_customer',
+    )
+
+    expect(courageText).not.toBe(selfDenialText)
+  })
+
+  it('保护自己与先行道歉会改变大壮观察到的状态', () => {
+    const protectedText = textAfterChoice(
+      'act1_customer',
+      'protect-self',
+      'act1_dazhuang',
+    )
+    const apologizedText = textAfterChoice(
+      'act1_customer',
+      'apologize',
+      'act1_dazhuang',
+    )
+
+    expect(protectedText).not.toBe(apologizedText)
+  })
+
+  it('向大壮承认疲惫会改变便利店相遇时的记忆', () => {
+    const admittedText = textAfterChoice(
+      'act1_dazhuang',
+      'admit-tired',
+      'act2_meeting',
+    )
+    const concealedText = textAfterChoice(
+      'act1_dazhuang',
+      'say-fine',
+      'act2_meeting',
+    )
+
+    expect(admittedText).not.toBe(concealedText)
+  })
+
+  it('接受热牛奶会改变小美观察鞋子的过程', () => {
+    const acceptedText = textAfterChoice(
+      'act2_meeting',
+      'accept-care',
+      'act2_shoes',
+    )
+    const avoidedText = textAfterChoice(
+      'act2_meeting',
+      'avoid-care',
+      'act2_shoes',
+    )
+
+    expect(acceptedText).not.toBe(avoidedText)
+  })
+
+  it('接听、忽略和发消息分别产生不同的离店前文本', () => {
+    const phoneTexts = ['answer-phone', 'ignore-phone', 'send-message'].map(
+      (choiceId) =>
+        textAfterChoice('act5_phone', choiceId, 'act5_departure'),
+    )
+
+    expect(new Set(phoneTexts).size).toBe(3)
+  })
+
+  it('拒绝鞋且没有带花的路线不会凭空出现球鞋或花瓣', () => {
+    const progress = {
+      ...createInitialProgress('act5_departure'),
+      flags: ['refusedShoes'],
+    }
+    const departureText = linesFor(story.act5_departure, progress)
+      .map((line) => line.text)
+      .join('')
+    const platformText = linesFor(story.act5_platform, {
+      ...progress,
+      nodeId: 'act5_platform',
+    })
+      .map((line) => line.text)
+      .join('')
+
+    expect(departureText).not.toMatch(/合脚球鞋|白玫瑰花瓣|干花瓣/)
+    expect(platformText).toContain('鞋和裤脚')
+    expect(platformText).not.toContain('球鞋和裤脚')
+  })
 })
 
 describe('resolveEnding', () => {
@@ -244,6 +394,29 @@ describe('resolveEnding', () => {
     }
 
     expect(resolveEnding(progress)).toBe('next-city')
+  })
+
+  it('实际迟到到站优先于此前说过体面拒绝', () => {
+    const progress = {
+      ...createInitialProgress(),
+      flags: ['explicitlyRefused', 'arrivedAfterDeparture'],
+    }
+
+    expect(resolveEnding(progress)).toBe('train-gone')
+  })
+
+  it('站台怀疑优先于迟到到站和此前体面拒绝', () => {
+    const progress = {
+      ...createInitialProgress(),
+      flags: [
+        'arrivedBeforeNine',
+        'doubtedAtPlatform',
+        'arrivedAfterDeparture',
+        'explicitlyRefused',
+      ],
+    }
+
+    expect(resolveEnding(progress)).toBe('platform-divide')
   })
 })
 

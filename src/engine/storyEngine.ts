@@ -2,12 +2,18 @@ import type {
   Choice,
   Condition,
   EndingId,
+  RelationKey,
   StatKey,
   StoryNode,
   StoryProgress,
 } from './types'
 
 const STAT_KEYS: StatKey[] = ['courage', 'attachment', 'selfDenial']
+const RELATION_KEYS: RelationKey[] = [
+  'xiaomeiTrust',
+  'dazhuangOpenness',
+  'xiaoliAdvice',
+]
 
 export function applyChoice(
   progress: StoryProgress,
@@ -61,6 +67,16 @@ export function matches(
       const maximum = condition.statMax?.[key]
 
       return maximum === undefined || progress.stats[key] <= maximum
+    }) &&
+    RELATION_KEYS.every((key) => {
+      const minimum = condition.relationMin?.[key]
+
+      return minimum === undefined || progress.relations[key] >= minimum
+    }) &&
+    RELATION_KEYS.every((key) => {
+      const maximum = condition.relationMax?.[key]
+
+      return maximum === undefined || progress.relations[key] <= maximum
     })
   )
 }
@@ -83,12 +99,12 @@ export function resolveEnding(progress: StoryProgress): EndingId {
     return 'platform-divide'
   }
 
-  if (flags.has('explicitlyRefused')) {
-    return 'better-person'
-  }
-
   if (flags.has('arrivedAfterDeparture')) {
     return 'train-gone'
+  }
+
+  if (flags.has('explicitlyRefused')) {
+    return 'better-person'
   }
 
   return 'unanswered'

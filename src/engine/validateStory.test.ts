@@ -17,6 +17,20 @@ const endingIds: EndingId[] = [
   'next-city',
 ]
 
+function terminalCharacterCounts(
+  defaultCount: number,
+  overrides: Partial<Record<EndingId, number>> = {},
+): Record<EndingId, number> {
+  return {
+    'train-gone': defaultCount,
+    unanswered: defaultCount,
+    'better-person': defaultCount,
+    'platform-divide': defaultCount,
+    'next-city': defaultCount,
+    ...overrides,
+  }
+}
+
 function minimalNode(
   id: string,
   overrides: Partial<StoryNode> = {},
@@ -107,6 +121,44 @@ describe('剧情图', () => {
     expect(errors).toContain('节点 hidden_node 从 act1_opening 不可达')
   })
 
+  it('报告结局解析节点仍设置自动后继', () => {
+    const errors = validateStory({
+      act1_opening: minimalNode('act1_opening', {
+        resolveEnding: true,
+        next: 'after-ending',
+      }),
+      'after-ending': minimalNode('after-ending', {
+        resolveEnding: true,
+      }),
+    })
+
+    expect(errors).toContain(
+      '结局解析节点 act1_opening 不能设置 next',
+    )
+  })
+
+  it('报告结局解析节点仍设置选择后继', () => {
+    const errors = validateStory({
+      act1_opening: minimalNode('act1_opening', {
+        resolveEnding: true,
+        choices: [
+          {
+            id: 'continue-after-ending',
+            label: '结局后继续',
+            next: 'after-ending',
+          },
+        ],
+      }),
+      'after-ending': minimalNode('after-ending', {
+        resolveEnding: true,
+      }),
+    })
+
+    expect(errors).toContain(
+      '结局解析节点 act1_opening 不能设置 choices',
+    )
+  })
+
   it('所有后继存在、没有非结局死路，且开场可达全部节点', () => {
     const errors = validateStory(story)
 
@@ -158,6 +210,17 @@ describe('剧情图', () => {
     )
   })
 
+  it('无人接听兼容曾接起电话或发过消息后仍留在仓库的路线', () => {
+    const unansweredText = [
+      endings.unanswered.summary,
+      ...endings.unanswered.epilogue,
+    ].join('')
+
+    expect(unansweredText).toContain('可能接起过')
+    expect(unansweredText).toContain('发过一行字')
+    expect(unansweredText).not.toContain('从未接起任何一通')
+  })
+
   it('询问小美但没有带花时也有专属后续文本', () => {
     const afterRose = story.act3_after_rose
     const askedWithoutRose = afterRose.variants?.find(
@@ -170,16 +233,130 @@ describe('剧情图', () => {
   })
 
   it('每条完整路线都有足够支撑二十至三十分钟阅读的正文', () => {
-    const terminalCharacters = Math.min(
-      ...endingIds.map(
-        (id) =>
-          endings[id].summary.length + endings[id].epilogue.join('').length,
-      ),
-    )
+    const terminalCharacters = Object.fromEntries(
+      endingIds.map((id) => [
+        id,
+        endings[id].summary.length + endings[id].epilogue.join('').length,
+      ]),
+    ) as Record<EndingId, number>
     const counts = enumeratePathCharacterCounts(story, terminalCharacters)
 
-    expect(counts.length).toBeGreaterThan(0)
+    expect(counts).toHaveLength(23328)
     expect(Math.min(...counts)).toBeGreaterThanOrEqual(4500)
+  })
+
+  it('路径统计使用当前状态匹配到的短变体而不是长基础文本', () => {
+    const variantStory = buildStory([
+      minimalNode('act1_opening', {
+        lines: [{ text: '开场' }],
+        choices: [
+          {
+            id: 'choose-short',
+            label: '选择短文本',
+            next: 'variant-node',
+            effects: { flags: ['shortVersion'] },
+          },
+        ],
+      }),
+      minimalNode('variant-node', {
+        lines: [{ text: '这是一段不会被选中的很长很长基础文本' }],
+        variants: [
+          {
+            when: { flagsAll: ['shortVersion'] },
+            lines: [{ text: '短' }],
+          },
+        ],
+        next: 'terminal',
+      }),
+      minimalNode('terminal', {
+        lines: [{ text: '终点' }],
+        resolveEnding: true,
+      }),
+    ])
+
+    expect(
+      enumeratePathCharacterCounts(
+        variantStory,
+        terminalCharacterCounts(7),
+      ),
+    ).toEqual([12])
+  })
+
+  it('不同选择进入同一节点时按各自旗标统计不同文本', () => {
+    const branchedStory = buildStory([
+      minimalNode('act1_opening', {
+        lines: [{ text: '开场' }],
+        choices: [
+          {
+            id: 'choose-short',
+            label: '短文本',
+            next: 'shared-node',
+            effects: { flags: ['shortVersion'] },
+          },
+          {
+            id: 'choose-base',
+            label: '基础文本',
+            next: 'shared-node',
+          },
+        ],
+      }),
+      minimalNode('shared-node', {
+        lines: [{ text: '较长的基础文本' }],
+        variants: [
+          {
+            when: { flagsAll: ['shortVersion'] },
+            lines: [{ text: '短' }],
+          },
+        ],
+        next: 'terminal',
+      }),
+      minimalNode('terminal', {
+        lines: [{ text: '终点' }],
+        resolveEnding: true,
+      }),
+    ])
+
+    const counts = enumeratePathCharacterCounts(
+      branchedStory,
+      terminalCharacterCounts(0),
+    )
+
+    expect([...counts].sort((left, right) => left - right)).toEqual([5, 11])
+  })
+
+  it('解析点按真实结局加入各自的结局字符数', () => {
+    const endingStory = buildStory([
+      minimalNode('act1_opening', {
+        lines: [{ text: '开场' }],
+        choices: [
+          {
+            id: 'arrive-late',
+            label: '迟到',
+            next: 'terminal',
+            effects: { flags: ['arrivedAfterDeparture'] },
+          },
+          {
+            id: 'remain',
+            label: '留下',
+            next: 'terminal',
+          },
+        ],
+      }),
+      minimalNode('terminal', {
+        lines: [{ text: '终点' }],
+        resolveEnding: true,
+      }),
+    ])
+
+    const counts = enumeratePathCharacterCounts(
+      endingStory,
+      terminalCharacterCounts(0, {
+        'train-gone': 100,
+        unanswered: 10,
+      }),
+    )
+
+    expect([...counts].sort((left, right) => left - right)).toEqual([14, 104])
   })
 
   it('路径枚举遇到循环时抛出包含循环节点的错误', () => {
@@ -189,7 +366,7 @@ describe('剧情图', () => {
     ])
 
     expect(() =>
-      enumeratePathCharacterCounts(cyclicStory, 0),
+      enumeratePathCharacterCounts(cyclicStory, terminalCharacterCounts(0)),
     ).toThrowError(/循环.*act1_opening/)
   })
 
@@ -210,11 +387,11 @@ describe('剧情图', () => {
 
     const shortLabelCounts = enumeratePathCharacterCounts(
       storyWithLabel('走'),
-      20,
+      terminalCharacterCounts(20),
     )
     const longLabelCounts = enumeratePathCharacterCounts(
       storyWithLabel('这是一段刻意写得很长很长的选择标签'),
-      20,
+      terminalCharacterCounts(20),
     )
 
     expect(longLabelCounts).toEqual(shortLabelCounts)
