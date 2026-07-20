@@ -1,8 +1,29 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createInitialProgress, createInitialSave } from './initialState'
 import { applyChoice, linesFor, matches, resolveEnding } from './storyEngine'
 import type { Choice, Condition, StoryNode } from './types'
+
+describe('createInitialProgress', () => {
+  it('返回完整的默认剧情进度', () => {
+    expect(createInitialProgress()).toEqual({
+      nodeId: 'act1_opening',
+      lineIndex: 0,
+      stats: {
+        courage: 0,
+        attachment: 0,
+        selfDenial: 0,
+      },
+      relations: {
+        xiaomeiTrust: 0,
+        dazhuangOpenness: 0,
+        xiaoliAdvice: 0,
+      },
+      flags: [],
+      completedActs: [],
+    })
+  })
+})
 
 describe('applyChoice', () => {
   it('叠加选择效果并进入下一节点', () => {
@@ -227,6 +248,17 @@ describe('resolveEnding', () => {
 })
 
 describe('createInitialSave', () => {
+  it('window 不存在时安全关闭减少动态效果', () => {
+    vi.stubGlobal('window', undefined)
+
+    try {
+      expect(() => createInitialSave()).not.toThrow()
+      expect(createInitialSave().settings.reducedMotion).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('matchMedia 不存在时安全返回默认设置', () => {
     const originalMatchMedia = window.matchMedia
 
@@ -249,6 +281,22 @@ describe('createInitialSave', () => {
           reducedMotion: false,
         },
       })
+    } finally {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      })
+    }
+  })
+
+  it('matchMedia 未匹配减少动态效果时保持 reducedMotion 关闭', () => {
+    const originalMatchMedia = window.matchMedia
+
+    try {
+      window.matchMedia = (() => ({ matches: false }) as MediaQueryList)
+
+      expect(createInitialSave().settings.reducedMotion).toBe(false)
     } finally {
       Object.defineProperty(window, 'matchMedia', {
         configurable: true,
