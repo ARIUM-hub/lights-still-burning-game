@@ -248,6 +248,23 @@ describe('resolveEnding', () => {
 })
 
 describe('createInitialSave', () => {
+  const originalMatchMediaDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    'matchMedia',
+  )
+  const restoreMatchMedia = () => {
+    if (originalMatchMediaDescriptor) {
+      Object.defineProperty(
+        window,
+        'matchMedia',
+        originalMatchMediaDescriptor,
+      )
+      return
+    }
+
+    Reflect.deleteProperty(window, 'matchMedia')
+  }
+
   it('window 不存在时安全关闭减少动态效果', () => {
     vi.stubGlobal('window', undefined)
 
@@ -260,8 +277,6 @@ describe('createInitialSave', () => {
   })
 
   it('matchMedia 不存在时安全返回默认设置', () => {
-    const originalMatchMedia = window.matchMedia
-
     try {
       Object.defineProperty(window, 'matchMedia', {
         configurable: true,
@@ -282,43 +297,33 @@ describe('createInitialSave', () => {
         },
       })
     } finally {
-      Object.defineProperty(window, 'matchMedia', {
-        configurable: true,
-        writable: true,
-        value: originalMatchMedia,
-      })
+      restoreMatchMedia()
     }
   })
 
   it('matchMedia 未匹配减少动态效果时保持 reducedMotion 关闭', () => {
-    const originalMatchMedia = window.matchMedia
-
     try {
       window.matchMedia = (() => ({ matches: false }) as MediaQueryList)
 
       expect(createInitialSave().settings.reducedMotion).toBe(false)
     } finally {
-      Object.defineProperty(window, 'matchMedia', {
-        configurable: true,
-        writable: true,
-        value: originalMatchMedia,
-      })
+      restoreMatchMedia()
     }
   })
 
   it('matchMedia 匹配减少动态效果时启用 reducedMotion', () => {
-    const originalMatchMedia = window.matchMedia
-
     try {
       window.matchMedia = (() => ({ matches: true }) as MediaQueryList)
 
       expect(createInitialSave().settings.reducedMotion).toBe(true)
     } finally {
-      Object.defineProperty(window, 'matchMedia', {
-        configurable: true,
-        writable: true,
-        value: originalMatchMedia,
-      })
+      restoreMatchMedia()
     }
+  })
+
+  it('修改 matchMedia 的测试不会改变原始属性描述符', () => {
+    expect(Object.getOwnPropertyDescriptor(window, 'matchMedia')).toEqual(
+      originalMatchMediaDescriptor,
+    )
   })
 })
