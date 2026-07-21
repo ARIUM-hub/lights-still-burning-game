@@ -104,6 +104,28 @@ describe('StoryStage', () => {
     expect(onChoose).toHaveBeenCalledWith('go')
   })
 
+  it('焦点停在对白按钮时数字键仍可选择', () => {
+    const onChoose = vi.fn()
+    render(
+      <StoryStage
+        scene="street"
+        title="街口"
+        line={{ text: '请选择。' }}
+        choices={choices}
+        onAdvance={vi.fn()}
+        onChoose={onChoose}
+        textSpeed="instant"
+        reducedMotion={false}
+      />,
+    )
+
+    const dialogueButton = screen.getByRole('button', { name: '推进剧情' })
+    dialogueButton.focus()
+    fireEvent.keyDown(dialogueButton, { key: '2' })
+
+    expect(onChoose).toHaveBeenCalledWith('go')
+  })
+
   it('Enter 和 Space 遵守先补全文再推进并阻止默认行为', () => {
     const onAdvance = vi.fn()
     render(

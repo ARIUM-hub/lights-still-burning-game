@@ -38,8 +38,6 @@ export function StoryStage({
   const imageHasFailed = failedScene === scene
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.target !== event.currentTarget) return
-
     if (textIsComplete && /^[1-3]$/.test(event.key)) {
       const choice = choices[Number(event.key) - 1]
 
@@ -49,6 +47,8 @@ export function StoryStage({
       }
       return
     }
+
+    if (event.target !== event.currentTarget) return
 
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()

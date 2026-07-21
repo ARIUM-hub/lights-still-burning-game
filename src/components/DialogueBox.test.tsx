@@ -17,7 +17,9 @@ describe('DialogueBox', () => {
     )
 
     expect(screen.getByText('小美')).toBeInTheDocument()
-    expect(screen.getByText('你还记得那盏灯吗？')).toBeInTheDocument()
+    const storyText = screen.getByText('你还记得那盏灯吗？')
+    expect(storyText).toBeInTheDocument()
+    expect(storyText.closest('button')).toBeNull()
   })
 
   it('无 speaker 时提供旁白的读屏文本', () => {

@@ -37,27 +37,32 @@ export const DialogueBox = forwardRef<DialogueBoxHandle, DialogueBoxProps>(
     useImperativeHandle(ref, () => ({ activate }), [onAdvance])
 
     return (
-      <button
-        type="button"
-        className="dialogue-box"
-        aria-label="推进剧情"
-        onClick={activate}
-      >
-        {line.speaker === undefined ? (
-          <span className="sr-only">旁白</span>
-        ) : (
-          <span className="dialogue-box__speaker">{line.speaker}</span>
-        )}
-        <span className="dialogue-box__text">
-          <TypewriterText
-            ref={typewriterRef}
-            text={line.text}
-            speed={textSpeed}
-            reducedMotion={reducedMotion}
-            onDone={onTextDone}
-          />
-        </span>
-      </button>
+      <div className="dialogue-box">
+        <div className="dialogue-box__content">
+          {line.speaker === undefined ? (
+            <span className="sr-only">旁白</span>
+          ) : (
+            <span className="dialogue-box__speaker">{line.speaker}</span>
+          )}
+          <span className="dialogue-box__text">
+            <TypewriterText
+              ref={typewriterRef}
+              text={line.text}
+              speed={textSpeed}
+              reducedMotion={reducedMotion}
+              onDone={onTextDone}
+            />
+          </span>
+        </div>
+        <button
+          type="button"
+          className="dialogue-box__advance"
+          aria-label="推进剧情"
+          onClick={activate}
+        >
+          <span aria-hidden="true">继续</span>
+        </button>
+      </div>
     )
   },
 )

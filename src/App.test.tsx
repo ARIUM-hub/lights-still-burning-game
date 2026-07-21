@@ -56,6 +56,19 @@ describe('App', () => {
     ).toBeInTheDocument()
   })
 
+  it('损坏存档恢复到标题页时显示恢复提示', () => {
+    const save = createInitialSave()
+    save.progress = createInitialProgress('missing-story-node')
+    writeSave(save)
+
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: '开始故事' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '存档中的剧情节点不存在，已清除当前路线',
+    )
+  })
+
   it('抵达结局时暂时显示结局占位', () => {
     const save = createInitialSave()
     save.progress = createInitialProgress('act5_resolve')

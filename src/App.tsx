@@ -2,13 +2,18 @@ import { GameProvider, useGame } from './app/GameContext'
 import { GameScreen } from './screens/GameScreen'
 
 function AppContent() {
-  const { save, currentEnding, startNewGame } = useGame()
+  const { save, currentEnding, recoverableError, startNewGame } = useGame()
 
   if (save.progress === null) {
     return (
       <main>
         <h1>灯火未熄</h1>
         <p>有些人不是离开了才失去。</p>
+        {recoverableError === null ? null : (
+          <p role="status" aria-live="polite">
+            {recoverableError}
+          </p>
+        )}
         <button type="button" onClick={startNewGame}>
           开始故事
         </button>
