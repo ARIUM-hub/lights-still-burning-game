@@ -13,6 +13,8 @@ function renderTitleScreen(
     onStart: vi.fn(),
     onContinue: vi.fn(),
     onRestart: vi.fn(),
+    hasMemories: false,
+    onOpenMemory: vi.fn(),
     onOpenSettings: vi.fn(),
     ...overrides,
   }
@@ -57,5 +59,14 @@ describe('TitleScreen', () => {
     await user.click(screen.getByRole('button', { name: '设置' }))
 
     expect(props.onOpenSettings).toHaveBeenCalledOnce()
+  })
+
+  it('首次通关后显示雨夜回忆入口', async () => {
+    const user = userEvent.setup()
+    const { props } = renderTitleScreen({ hasMemories: true })
+
+    await user.click(screen.getByRole('button', { name: '雨夜回忆' }))
+
+    expect(props.onOpenMemory).toHaveBeenCalledOnce()
   })
 })

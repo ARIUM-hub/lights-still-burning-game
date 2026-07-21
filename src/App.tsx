@@ -2,9 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 
 import { GameProvider, useGame } from './app/GameContext'
 import { SettingsSheet } from './components/SettingsSheet'
-import { TopBar } from './components/TopBar'
-import { GameScreen, chapterLabel } from './screens/GameScreen'
+import { EndingScreen } from './screens/EndingScreen'
+import { GameScreen } from './screens/GameScreen'
+import { MemoryScreen } from './screens/MemoryScreen'
 import { TitleScreen } from './screens/TitleScreen'
+import { endings } from './story/endings'
+
+type View = 'title' | 'memory' | 'game' | 'ending'
 
 function AppContent() {
   const {
@@ -15,10 +19,18 @@ function AppContent() {
     startNewGame,
     continueGame,
     updateSettings,
+    restartFromAct,
     clearRoute,
     clearAllProgress,
+    leaveEnding,
   } = useGame()
-  const [view, setView] = useState<'title' | 'game'>('title')
+  const [view, setView] = useState<View>(() => {
+    if (currentEnding !== null) {
+      return 'ending'
+    }
+
+    return save.progress === null ? 'title' : 'game'
+  })
   const [settingsOpen, setSettingsOpen] = useState(false)
   const titleActionRef = useRef<HTMLButtonElement>(null)
   const focusTitleAfterClear = useRef(false)
@@ -33,6 +45,12 @@ function AppContent() {
       titleActionRef.current?.focus()
     }
   }, [save.progress, settingsOpen, view])
+
+  useEffect(() => {
+    if (currentEnding !== null) {
+      setView('ending')
+    }
+  }, [currentEnding])
 
   function handleStart() {
     startNewGame()
@@ -58,35 +76,71 @@ function AppContent() {
     setView('title')
   }
 
+  function handleCollectEnding() {
+    leaveEnding()
+    setView('memory')
+  }
+
+  function handleRestart() {
+    startNewGame()
+    setView('game')
+  }
+
+  function handleReplay(act: number) {
+    restartFromAct(act)
+    setView('game')
+  }
+
   let content
 
-  if (view === 'title' || save.progress === null) {
+  if (view === 'memory') {
+    content = (
+      <MemoryScreen
+        unlocked={save.unlockedEndings}
+        completedActs={save.progress?.completedActs ?? []}
+        onReplay={handleReplay}
+        onBack={() => setView('title')}
+      />
+    )
+  } else if (view === 'title') {
     content = (
       <TitleScreen
         hasProgress={save.progress !== null}
+        hasMemories={save.unlockedEndings.length > 0}
         recoverableError={recoverableError}
         onStart={handleStart}
         onContinue={handleContinue}
         onRestart={handleStart}
+        onOpenMemory={() => setView('memory')}
         onOpenSettings={() => setSettingsOpen(true)}
         primaryActionRef={titleActionRef}
       />
     )
   } else if (currentEnding !== null && currentNode !== null) {
     content = (
-      <main className="ending-placeholder">
-        <TopBar
-          chapter={chapterLabel(currentNode.act)}
-          title={currentNode.title}
-          onOpenSettings={() => setSettingsOpen(true)}
-        />
-        <section className="ending-placeholder__content">
-          <p>结局已抵达</p>
-        </section>
-      </main>
+      <EndingScreen
+        ending={endings[currentEnding]}
+        onCollect={handleCollectEnding}
+        onRestart={handleRestart}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
     )
-  } else {
+  } else if (save.progress !== null) {
     content = <GameScreen onOpenSettings={() => setSettingsOpen(true)} />
+  } else {
+    content = (
+      <TitleScreen
+        hasProgress={false}
+        hasMemories={save.unlockedEndings.length > 0}
+        recoverableError={recoverableError}
+        onStart={handleStart}
+        onContinue={handleContinue}
+        onRestart={handleStart}
+        onOpenMemory={() => setView('memory')}
+        onOpenSettings={() => setSettingsOpen(true)}
+        primaryActionRef={titleActionRef}
+      />
+    )
   }
 
   return (

@@ -43,8 +43,7 @@ describe('App', () => {
     ).toBeInTheDocument()
   })
 
-  it('已有进度时先显示继续雨夜，点击后进入 GameScreen', async () => {
-    const user = userEvent.setup()
+  it('刷新时存在进行中路线会直接回到 GameScreen', () => {
     const save = createInitialSave()
     save.progress = createInitialProgress('act1_opening')
     save.settings.textSpeed = 'instant'
@@ -52,25 +51,21 @@ describe('App', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('button', { name: '继续雨夜' })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: '剧情场景：高架桥下的灯' })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '继续雨夜' }))
-
     expect(
       screen.getByRole('region', { name: '剧情场景：高架桥下的灯' }),
     ).toBeInTheDocument()
   })
 
-  it('从头开始会重置旧进度并进入第一幕', async () => {
+  it('标题页从头开始会重置旧进度并进入第一幕', async () => {
     const user = userEvent.setup()
     const save = createInitialSave()
-    save.progress = createInitialProgress('act2_meeting')
+    save.progress = null
+    save.unlockedEndings = ['train-gone']
     save.settings.textSpeed = 'instant'
     writeSave(save)
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '从头开始' }))
+    await user.click(screen.getByRole('button', { name: '开始故事' }))
 
     expect(
       screen.getByRole('region', { name: '剧情场景：高架桥下的灯' }),
@@ -99,7 +94,6 @@ describe('App', () => {
     writeSave(save)
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '继续雨夜' }))
     await user.click(screen.getByRole('button', { name: '打开设置' }))
     await user.click(screen.getByRole('button', { name: '清除当前路线' }))
     await user.click(
@@ -125,18 +119,44 @@ describe('App', () => {
     )
   })
 
-  it('抵达结局时暂时显示结局占位并保持设置可达', async () => {
+  it('抵达结局时展示完整结局并可进入雨夜回忆', async () => {
     const user = userEvent.setup()
     const save = createInitialSave()
     save.progress = createInitialProgress('act5_resolve')
     save.progress.flags = ['startedJourney']
+    save.unlockedEndings = ['next-city']
     writeSave(save)
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '继续雨夜' }))
-    expect(screen.getByText('结局已抵达')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '下一座城市' }),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '打开设置' }))
     expect(screen.getByRole('dialog', { name: '设置' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '关闭设置' }))
+    await user.click(screen.getByRole('button', { name: '收下这张残票' }))
+
+    expect(screen.getByRole('heading', { name: '雨夜回忆' })).toBeInTheDocument()
+    expect(screen.getByText('下一座城市')).toBeInTheDocument()
+  })
+
+  it('进度为空时仍能在收藏页重玩已完成章节', async () => {
+    const user = userEvent.setup()
+    const save = createInitialSave()
+    save.unlockedEndings = ['train-gone']
+    save.settings.textSpeed = 'instant'
+    writeSave(save)
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '雨夜回忆' }))
+    expect(screen.getByRole('heading', { name: '雨夜回忆' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '重玩第二幕' }))
+    expect(screen.getByText('第二幕')).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: '剧情场景：便利店的热牛奶' }),
+    ).toBeInTheDocument()
   })
 })

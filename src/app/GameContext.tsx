@@ -86,6 +86,10 @@ function enterNode(
     }
   }
 
+  if (targetNode.resolveEnding) {
+    completedActs.add(targetNode.act)
+  }
+
   const nextProgress: StoryProgress = {
     ...progress,
     nodeId: targetNode.id,

@@ -6,6 +6,8 @@ interface TitleScreenProps {
   onStart(): void
   onContinue(): void
   onRestart(): void
+  hasMemories: boolean
+  onOpenMemory(): void
   onOpenSettings(): void
   primaryActionRef?: Ref<HTMLButtonElement>
 }
@@ -16,6 +18,8 @@ export function TitleScreen({
   onStart,
   onContinue,
   onRestart,
+  hasMemories,
+  onOpenMemory,
   onOpenSettings,
   primaryActionRef,
 }: TitleScreenProps) {
@@ -57,6 +61,11 @@ export function TitleScreen({
               开始故事
             </button>
           )}
+          {hasMemories ? (
+            <button type="button" onClick={onOpenMemory}>
+              雨夜回忆
+            </button>
+          ) : null}
           <button type="button" onClick={onOpenSettings}>
             设置
           </button>

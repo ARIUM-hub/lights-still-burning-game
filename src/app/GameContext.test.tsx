@@ -208,6 +208,7 @@ describe('GameProvider', () => {
     act(() => result.current.choose('trust-and-go'))
 
     expect(result.current.save.progress?.nodeId).toBe('act5_resolve')
+    expect(result.current.save.progress?.completedActs).toEqual([5])
     expect(result.current.currentEnding).toBe('next-city')
     expect(result.current.save.unlockedEndings).toEqual(['next-city'])
   })
