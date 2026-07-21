@@ -37,6 +37,10 @@ export function validateStory(story: Record<string, StoryNode>): string[] {
       errors.push(`结局解析节点 ${node.id} 不能设置 choices`)
     }
 
+    if (node.next !== undefined && (node.choices?.length ?? 0) > 0) {
+      errors.push(`剧情节点 ${node.id} 不能同时设置 next 和 choices`)
+    }
+
     const nextIds = successors(node)
     for (const nextId of nextIds) {
       if (!Object.prototype.hasOwnProperty.call(story, nextId)) {

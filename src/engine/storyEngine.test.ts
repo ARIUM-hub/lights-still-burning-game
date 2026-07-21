@@ -48,9 +48,9 @@ describe('跨幕连续性', () => {
     progress = { ...progress, nodeId: 'act4_invitation' }
     progress = chooseFromCurrent(progress, 'say-yes')
 
-    expect(storyText('act4_after_invitation', progress)).not.toContain(
-      '合脚球鞋',
-    )
+    const invitationText = storyText('act4_after_invitation', progress)
+    expect(invitationText).not.toContain('合脚球鞋')
+    expect(invitationText).not.toContain('旧鞋')
 
     progress = { ...progress, nodeId: 'act5_phone' }
     progress = chooseFromCurrent(progress, 'answer-phone')

@@ -159,6 +159,31 @@ describe('剧情图', () => {
     )
   })
 
+  it('报告普通节点同时设置自动后继和选择后继', () => {
+    const errors = validateStory({
+      act1_opening: minimalNode('act1_opening', {
+        next: 'automatic-target',
+        choices: [
+          {
+            id: 'manual-target',
+            label: '选择另一条路',
+            next: 'choice-target',
+          },
+        ],
+      }),
+      'automatic-target': minimalNode('automatic-target', {
+        resolveEnding: true,
+      }),
+      'choice-target': minimalNode('choice-target', {
+        resolveEnding: true,
+      }),
+    })
+
+    expect(errors).toContain(
+      '剧情节点 act1_opening 不能同时设置 next 和 choices',
+    )
+  })
+
   it('所有后继存在、没有非结局死路，且开场可达全部节点', () => {
     const errors = validateStory(story)
 
