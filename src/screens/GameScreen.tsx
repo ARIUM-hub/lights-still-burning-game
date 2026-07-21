@@ -1,7 +1,25 @@
 import { useGame } from '../app/GameContext'
 import { StoryStage } from '../components/StoryStage'
+import { TopBar } from '../components/TopBar'
+import type { StoryNode } from '../engine/types'
 
-export function GameScreen() {
+const ACT_LABELS: Record<StoryNode['act'], string> = {
+  1: '第一幕',
+  2: '第二幕',
+  3: '第三幕',
+  4: '第四幕',
+  5: '第五幕',
+}
+
+export function chapterLabel(act: StoryNode['act']): string {
+  return ACT_LABELS[act]
+}
+
+export function GameScreen({
+  onOpenSettings,
+}: {
+  onOpenSettings(): void
+}) {
   const {
     save,
     currentNode,
@@ -39,6 +57,11 @@ export function GameScreen() {
   if (currentLine === undefined) {
     return (
       <main className="game-screen game-screen--recovery">
+        <TopBar
+          chapter={chapterLabel(currentNode.act)}
+          title={currentNode.title}
+          onOpenSettings={onOpenSettings}
+        />
         {status}
         <section aria-label="剧情恢复" className="game-screen__recovery">
           <h1>{currentNode.title}</h1>
@@ -55,6 +78,11 @@ export function GameScreen() {
 
   return (
     <main className="game-screen">
+      <TopBar
+        chapter={chapterLabel(currentNode.act)}
+        title={currentNode.title}
+        onOpenSettings={onOpenSettings}
+      />
       {status}
       <StoryStage
         scene={currentNode.scene}

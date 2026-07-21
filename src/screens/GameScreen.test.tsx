@@ -6,6 +6,7 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { vi } from 'vitest'
 
 import { GameProvider } from '../app/GameContext'
 import { createInitialProgress, createInitialSave } from '../engine/initialState'
@@ -24,10 +25,10 @@ function saveAt(nodeId: string, lineIndex: number): SaveData {
   return save
 }
 
-function renderGameScreen() {
+function renderGameScreen(onOpenSettings = vi.fn()) {
   return render(
     <GameProvider>
-      <GameScreen />
+      <GameScreen onOpenSettings={onOpenSettings} />
     </GameProvider>,
   )
 }
@@ -41,10 +42,24 @@ describe('GameScreen', () => {
 
     renderGameScreen()
 
-    expect(screen.getByText('又一次顶班')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: '又一次顶班' }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: /说自己已经连续上了太多夜班/ }),
     ).not.toBeInTheDocument()
+  })
+
+  it('显示中文章节和当前节点标题，并可打开设置', () => {
+    const onOpenSettings = vi.fn()
+    writeSave(saveAt('act1_opening', 0))
+
+    renderGameScreen(onOpenSettings)
+
+    expect(screen.getByText('第一幕')).toBeInTheDocument()
+    expect(screen.getAllByText('高架桥下的灯').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: '打开设置' }))
+    expect(onOpenSettings).toHaveBeenCalledOnce()
   })
 
   it('真实 Context 中点击末行选择会进入目标节点', () => {

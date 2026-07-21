@@ -1,35 +1,91 @@
+import { useState } from 'react'
+
 import { GameProvider, useGame } from './app/GameContext'
-import { GameScreen } from './screens/GameScreen'
+import { SettingsSheet } from './components/SettingsSheet'
+import { TopBar } from './components/TopBar'
+import { GameScreen, chapterLabel } from './screens/GameScreen'
+import { TitleScreen } from './screens/TitleScreen'
 
 function AppContent() {
-  const { save, currentEnding, recoverableError, startNewGame } = useGame()
+  const {
+    save,
+    currentNode,
+    currentEnding,
+    recoverableError,
+    startNewGame,
+    continueGame,
+    updateSettings,
+    clearRoute,
+    clearAllProgress,
+  } = useGame()
+  const [view, setView] = useState<'title' | 'game'>('title')
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
-  if (save.progress === null) {
-    return (
-      <main>
-        <h1>灯火未熄</h1>
-        <p>有些人不是离开了才失去。</p>
-        {recoverableError === null ? null : (
-          <p role="status" aria-live="polite">
-            {recoverableError}
-          </p>
-        )}
-        <button type="button" onClick={startNewGame}>
-          开始故事
-        </button>
-      </main>
-    )
+  function handleStart() {
+    startNewGame()
+    setView('game')
   }
 
-  if (currentEnding !== null) {
-    return (
+  function handleContinue() {
+    continueGame()
+    setView('game')
+  }
+
+  function handleClearRoute() {
+    clearRoute()
+    setSettingsOpen(false)
+    setView('title')
+  }
+
+  function handleClearAllProgress() {
+    clearAllProgress()
+    setSettingsOpen(false)
+    setView('title')
+  }
+
+  let content
+
+  if (view === 'title' || save.progress === null) {
+    content = (
+      <TitleScreen
+        hasProgress={save.progress !== null}
+        recoverableError={recoverableError}
+        onStart={handleStart}
+        onContinue={handleContinue}
+        onRestart={handleStart}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+    )
+  } else if (currentEnding !== null && currentNode !== null) {
+    content = (
       <main className="ending-placeholder">
-        <p>结局已抵达</p>
+        <TopBar
+          chapter={chapterLabel(currentNode.act)}
+          title={currentNode.title}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+        <section className="ending-placeholder__content">
+          <p>结局已抵达</p>
+        </section>
       </main>
     )
+  } else {
+    content = <GameScreen onOpenSettings={() => setSettingsOpen(true)} />
   }
 
-  return <GameScreen />
+  return (
+    <>
+      {content}
+      <SettingsSheet
+        open={settingsOpen}
+        settings={save.settings}
+        onChange={updateSettings}
+        onClose={() => setSettingsOpen(false)}
+        onClearRoute={handleClearRoute}
+        onClearAllProgress={handleClearAllProgress}
+      />
+    </>
+  )
 }
 
 export default function App() {
