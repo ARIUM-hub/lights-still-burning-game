@@ -88,13 +88,19 @@ export const act1Nodes: StoryNode[] = [
         id: 'apologize',
         label: '先道歉并提出重新制作',
         next: 'act1_dazhuang',
-        effects: { stats: { selfDenial: 1 } },
+        effects: {
+          stats: { selfDenial: 1 },
+          flags: ['apologizedToCustomer'],
+        },
       },
       {
         id: 'protect-self',
         label: '调取监控，平静说明杯盖交付时完好',
         next: 'act1_dazhuang',
-        effects: { stats: { courage: 2 } },
+        effects: {
+          stats: { courage: 2 },
+          flags: ['defendedSelfToCustomer'],
+        },
       },
     ],
   },
@@ -113,7 +119,7 @@ export const act1Nodes: StoryNode[] = [
     ],
     variants: [
       {
-        when: { statMin: { courage: 2 } },
+        when: { flagsAll: ['defendedSelfToCustomer'] },
         lines: [
           { text: '凌晨三点半，小丑回到旧居民楼。大壮坐在楼梯口修椅子，一抬眼便说他今晚走路不一样，不是鞋不疼了，而是肩膀没有像平常那样缩着。' },
           { text: '小丑告诉他，自己调了监控，把杯盖的事实说清楚。客人最后仍不高兴，店里也没有人为他鼓掌，但那份不高兴没有像从前一样全部留在他身上。' },
@@ -122,7 +128,7 @@ export const act1Nodes: StoryNode[] = [
         ],
       },
       {
-        when: { statMin: { selfDenial: 1 } },
+        when: { flagsAll: ['apologizedToCustomer'] },
         lines: [
           { text: '凌晨三点半，小丑回到旧居民楼。大壮坐在楼梯口修椅子，只看了他一眼，就问今晚又替谁认了错；他熟悉那种把肩膀缩起来的姿势。' },
           { text: '小丑说重新做一杯咖啡也没什么，至少客人没有继续闹。话说得轻巧，袖口留下的污渍却还湿着，像一件被尽快结束却没有真正解决的事。' },

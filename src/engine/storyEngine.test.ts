@@ -1,9 +1,66 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { story } from '../story'
+import { endings } from '../story/endings'
 import { createInitialProgress, createInitialSave } from './initialState'
 import { applyChoice, linesFor, matches, resolveEnding } from './storyEngine'
 import type { Choice, Condition, StoryNode } from './types'
+
+function chooseFromCurrent(
+  progress: ReturnType<typeof createInitialProgress>,
+  choiceId: string,
+) {
+  const choice = story[progress.nodeId].choices?.find(
+    (candidate) => candidate.id === choiceId,
+  )
+  if (!choice) throw new Error(`节点 ${progress.nodeId} 不存在选择 ${choiceId}`)
+  return applyChoice(progress, choice)
+}
+
+function storyText(nodeId: string, progress: ReturnType<typeof createInitialProgress>) {
+  return linesFor(story[nodeId], progress)
+    .map((line) => line.text)
+    .join('')
+}
+
+describe('跨幕连续性', () => {
+  it('道歉路线不会被累计勇气误写成调监控自证', () => {
+    let progress = createInitialProgress('act1_cover_shift')
+    progress = chooseFromCurrent(progress, 'refuse-shift')
+    progress = chooseFromCurrent(progress, 'apologize')
+
+    const text = storyText('act1_dazhuang', progress)
+    expect(text).toContain('重新做一杯咖啡')
+    expect(text).not.toMatch(/调了监控|把杯盖的事实说清楚/)
+  })
+
+  it('保护自己路线仍会回望调监控说明事实', () => {
+    let progress = createInitialProgress('act1_customer')
+    progress = chooseFromCurrent(progress, 'protect-self')
+
+    const text = storyText('act1_dazhuang', progress)
+    expect(text).toMatch(/调了监控|把杯盖的事实说清楚/)
+  })
+
+  it('拒绝球鞋后答应同行不会让球鞋凭空回到故事', () => {
+    let progress = createInitialProgress('act2_shoes')
+    progress = chooseFromCurrent(progress, 'refuse-shoes')
+    progress = { ...progress, nodeId: 'act4_invitation' }
+    progress = chooseFromCurrent(progress, 'say-yes')
+
+    expect(storyText('act4_after_invitation', progress)).not.toContain(
+      '合脚球鞋',
+    )
+
+    progress = { ...progress, nodeId: 'act5_phone' }
+    progress = chooseFromCurrent(progress, 'answer-phone')
+    progress = chooseFromCurrent(progress, 'leave-before-nine')
+    progress = chooseFromCurrent(progress, 'trust-and-go')
+
+    expect(resolveEnding(progress)).toBe('next-city')
+    expect(endings['next-city'].epilogue.join('')).not.toContain('磨旧的球鞋')
+  })
+})
 
 describe('createInitialProgress', () => {
   it('返回完整的默认剧情进度', () => {
