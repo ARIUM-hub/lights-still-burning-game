@@ -5,7 +5,7 @@ import {
   waitFor,
 } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createInitialProgress, createInitialSave } from '../engine/initialState'
 import type { SaveData } from '../engine/types'
@@ -63,6 +63,40 @@ describe('GameProvider', () => {
 
     expect(result.current.save).toEqual(stored)
     expect(result.current.currentNode?.id).toBe('act2_meeting')
+  })
+
+  it('加载不存在的剧情节点时清除损坏路线并保留恢复提示', async () => {
+    const damaged = saveAt('missing-story-node', 2)
+    damaged.unlockedEndings = ['train-gone']
+    writeSave(damaged)
+
+    const { result } = renderGame()
+
+    expect(result.current.save.progress).toBeNull()
+    expect(result.current.save.unlockedEndings).toEqual(['train-gone'])
+    expect(result.current.recoverableError).toContain(
+      '存档中的剧情节点不存在，已清除当前路线',
+    )
+    await waitFor(() => expect(storedSave()?.progress).toBeNull())
+  })
+
+  it('自动保存失败时保留会话并暴露可恢复错误', async () => {
+    const setItem = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementationOnce(() => {
+        throw new DOMException('存储被禁用', 'SecurityError')
+      })
+
+    try {
+      const { result } = renderGame()
+
+      await waitFor(() =>
+        expect(result.current.recoverableError).toContain('自动保存失败'),
+      )
+      expect(result.current.save.progress).toBeNull()
+    } finally {
+      setItem.mockRestore()
+    }
   })
 
   it('开始新游戏后进入第一幕开场', () => {

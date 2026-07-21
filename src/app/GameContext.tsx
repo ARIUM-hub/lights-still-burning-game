@@ -48,7 +48,7 @@ interface GameState {
   recoverableError: string | null
 }
 
-const ACT_START_NODES: Record<number, string> = {
+const ACT_START_NODES: Partial<Record<number, string>> = {
   1: 'act1_opening',
   2: 'act2_meeting',
   3: 'act3_photo',
@@ -57,6 +57,20 @@ const ACT_START_NODES: Record<number, string> = {
 }
 
 const GameContext = createContext<GameApi | undefined>(undefined)
+
+function createInitialGameState(): GameState {
+  const save = loadSave()
+  const nodeId = save.progress?.nodeId
+
+  if (nodeId !== undefined && story[nodeId] === undefined) {
+    return {
+      save: clearCurrentRoute(save),
+      recoverableError: `存档中的剧情节点不存在，已清除当前路线：${nodeId}`,
+    }
+  }
+
+  return { save, recoverableError: null }
+}
 
 function enterNode(
   save: SaveData,
@@ -98,13 +112,21 @@ function enterNode(
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<GameState>(() => ({
-    save: loadSave(),
-    recoverableError: null,
-  }))
+  const [state, setState] = useState<GameState>(createInitialGameState)
 
   useEffect(() => {
-    writeSave(state.save)
+    try {
+      writeSave(state.save)
+    } catch {
+      setState((current) =>
+        current.recoverableError?.startsWith('自动保存失败')
+          ? current
+          : {
+              ...current,
+              recoverableError: '自动保存失败，当前进度仍保留在本次会话中',
+            },
+      )
+    }
   }, [state.save])
 
   const currentNode = useMemo(() => {
@@ -167,8 +189,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (node === undefined) {
         return {
-          ...current,
-          recoverableError: `当前剧情节点不存在：${progress.nodeId}`,
+          save: clearCurrentRoute(current.save),
+          recoverableError: `当前剧情节点不存在，已清除当前路线：${progress.nodeId}`,
         }
       }
 
@@ -205,8 +227,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (targetNode === undefined) {
         return {
-          ...current,
-          recoverableError: `目标剧情节点不存在：${node.next}`,
+          save: clearCurrentRoute(current.save),
+          recoverableError: `目标剧情节点不存在，已清除当前路线：${node.next}`,
         }
       }
 
@@ -242,8 +264,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (targetNode === undefined) {
         return {
-          ...current,
-          recoverableError: `目标剧情节点不存在：${choice.next}`,
+          save: clearCurrentRoute(current.save),
+          recoverableError: `目标剧情节点不存在，已清除当前路线：${choice.next}`,
         }
       }
 
