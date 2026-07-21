@@ -1,14 +1,8 @@
 import { GameProvider, useGame } from './app/GameContext'
+import { GameScreen } from './screens/GameScreen'
 
 function AppContent() {
-  const {
-    save,
-    currentNode,
-    currentLines,
-    currentEnding,
-    startNewGame,
-    advance,
-  } = useGame()
+  const { save, currentEnding, startNewGame } = useGame()
 
   if (save.progress === null) {
     return (
@@ -22,30 +16,15 @@ function AppContent() {
     )
   }
 
-  if (currentNode === null) {
+  if (currentEnding !== null) {
     return (
-      <main>
-        <h1>灯火未熄</h1>
-        <p>当前剧情暂时无法读取。</p>
+      <main className="ending-placeholder">
+        <p>结局已抵达</p>
       </main>
     )
   }
 
-  const currentLine = currentLines[save.progress.lineIndex]
-
-  return (
-    <main>
-      <h1>{currentNode.title}</h1>
-      <p>{currentLine?.text ?? ''}</p>
-      {currentEnding === null ? (
-        <button type="button" onClick={advance}>
-          继续
-        </button>
-      ) : (
-        <p>结局已抵达</p>
-      )}
-    </main>
-  )
+  return <GameScreen />
 }
 
 export default function App() {
