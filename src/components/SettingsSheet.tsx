@@ -21,7 +21,12 @@ export function SettingsSheet({
   onClearAllProgress,
 }: SettingsSheetProps) {
   const titleId = useId()
+  const sheetRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const routeTriggerRef = useRef<HTMLButtonElement>(null)
+  const routeConfirmRef = useRef<HTMLButtonElement>(null)
+  const collectionTriggerRef = useRef<HTMLButtonElement>(null)
+  const collectionConfirmRef = useRef<HTMLButtonElement>(null)
   const onCloseRef = useRef(onClose)
   const [confirmingRoute, setConfirmingRoute] = useState(false)
   const [confirmingCollection, setConfirmingCollection] = useState(false)
@@ -39,9 +44,43 @@ export function SettingsSheet({
         ? document.activeElement
         : null
 
+    const backdrop = sheetRef.current?.parentElement
+    const backgroundElements = backdrop?.parentElement
+      ? Array.from(backdrop.parentElement.children).filter(
+          (element): element is HTMLElement =>
+            element instanceof HTMLElement && element !== backdrop,
+        )
+      : []
+    const previousInertState = backgroundElements.map((element) => ({
+      element,
+      inert: element.hasAttribute('inert'),
+    }))
+    for (const element of backgroundElements) element.setAttribute('inert', '')
+
     closeButtonRef.current?.focus()
 
     function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Tab') {
+        const focusable = Array.from(
+          sheetRef.current?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled)',
+          ) ?? [],
+        )
+        const first = focusable[0]
+        const last = focusable.at(-1)
+
+        if (first && last) {
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault()
+            last.focus()
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault()
+            first.focus()
+          }
+        }
+        return
+      }
+
       if (event.key !== 'Escape') return
 
       event.preventDefault()
@@ -54,6 +93,10 @@ export function SettingsSheet({
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      for (const { element, inert } of previousInertState) {
+        if (inert) element.setAttribute('inert', '')
+        else element.removeAttribute('inert')
+      }
       previouslyFocused?.focus()
     }
   }, [open])
@@ -86,11 +129,32 @@ export function SettingsSheet({
     onClearAllProgress()
   }
 
+  function beginRouteConfirmation() {
+    setConfirmingRoute(true)
+    queueMicrotask(() => routeConfirmRef.current?.focus())
+  }
+
+  function cancelRouteConfirmation() {
+    setConfirmingRoute(false)
+    queueMicrotask(() => routeTriggerRef.current?.focus())
+  }
+
+  function beginCollectionConfirmation() {
+    setConfirmingCollection(true)
+    queueMicrotask(() => collectionConfirmRef.current?.focus())
+  }
+
+  function cancelCollectionConfirmation() {
+    setConfirmingCollection(false)
+    queueMicrotask(() => collectionTriggerRef.current?.focus())
+  }
+
   if (!open) return null
 
   return (
     <div className="settings-sheet__backdrop">
       <section
+        ref={sheetRef}
         className="settings-sheet"
         role="dialog"
         aria-modal="true"
@@ -168,18 +232,26 @@ export function SettingsSheet({
           <div className="settings-sheet__danger-action">
             {confirmingRoute ? (
               <>
-                <button type="button" onClick={handleClearRoute}>
+                <button
+                  ref={routeConfirmRef}
+                  type="button"
+                  onClick={handleClearRoute}
+                >
                   确认清除当前路线
                 </button>
                 <button
                   type="button"
-                  onClick={() => setConfirmingRoute(false)}
+                  onClick={cancelRouteConfirmation}
                 >
                   取消清除当前路线
                 </button>
               </>
             ) : (
-              <button type="button" onClick={() => setConfirmingRoute(true)}>
+              <button
+                ref={routeTriggerRef}
+                type="button"
+                onClick={beginRouteConfirmation}
+              >
                 清除当前路线
               </button>
             )}
@@ -188,20 +260,25 @@ export function SettingsSheet({
           <div className="settings-sheet__danger-action">
             {confirmingCollection ? (
               <>
-                <button type="button" onClick={handleClearAllProgress}>
+                <button
+                  ref={collectionConfirmRef}
+                  type="button"
+                  onClick={handleClearAllProgress}
+                >
                   确认清除全部收藏
                 </button>
                 <button
                   type="button"
-                  onClick={() => setConfirmingCollection(false)}
+                  onClick={cancelCollectionConfirmation}
                 >
                   取消清除全部收藏
                 </button>
               </>
             ) : (
               <button
+                ref={collectionTriggerRef}
                 type="button"
-                onClick={() => setConfirmingCollection(true)}
+                onClick={beginCollectionConfirmation}
               >
                 清除全部收藏
               </button>

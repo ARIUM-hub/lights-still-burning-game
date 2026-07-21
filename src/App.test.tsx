@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
@@ -107,7 +107,9 @@ describe('App', () => {
     )
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '开始故事' })).toBeInTheDocument()
+    const startButton = screen.getByRole('button', { name: '开始故事' })
+    expect(startButton).toBeInTheDocument()
+    await waitFor(() => expect(startButton).toHaveFocus())
   })
 
   it('损坏存档恢复到标题页时显示恢复提示', () => {

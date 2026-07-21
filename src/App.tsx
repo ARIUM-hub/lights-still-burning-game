@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { GameProvider, useGame } from './app/GameContext'
 import { SettingsSheet } from './components/SettingsSheet'
@@ -20,6 +20,19 @@ function AppContent() {
   } = useGame()
   const [view, setView] = useState<'title' | 'game'>('title')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const titleActionRef = useRef<HTMLButtonElement>(null)
+  const focusTitleAfterClear = useRef(false)
+
+  useEffect(() => {
+    if (
+      focusTitleAfterClear.current &&
+      !settingsOpen &&
+      (view === 'title' || save.progress === null)
+    ) {
+      focusTitleAfterClear.current = false
+      titleActionRef.current?.focus()
+    }
+  }, [save.progress, settingsOpen, view])
 
   function handleStart() {
     startNewGame()
@@ -32,12 +45,14 @@ function AppContent() {
   }
 
   function handleClearRoute() {
+    focusTitleAfterClear.current = true
     clearRoute()
     setSettingsOpen(false)
     setView('title')
   }
 
   function handleClearAllProgress() {
+    focusTitleAfterClear.current = true
     clearAllProgress()
     setSettingsOpen(false)
     setView('title')
@@ -54,6 +69,7 @@ function AppContent() {
         onContinue={handleContinue}
         onRestart={handleStart}
         onOpenSettings={() => setSettingsOpen(true)}
+        primaryActionRef={titleActionRef}
       />
     )
   } else if (currentEnding !== null && currentNode !== null) {

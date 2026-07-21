@@ -1,3 +1,5 @@
+import type { Ref } from 'react'
+
 interface TitleScreenProps {
   hasProgress: boolean
   recoverableError: string | null
@@ -5,6 +7,7 @@ interface TitleScreenProps {
   onContinue(): void
   onRestart(): void
   onOpenSettings(): void
+  primaryActionRef?: Ref<HTMLButtonElement>
 }
 
 export function TitleScreen({
@@ -14,6 +17,7 @@ export function TitleScreen({
   onContinue,
   onRestart,
   onOpenSettings,
+  primaryActionRef,
 }: TitleScreenProps) {
   return (
     <main className="title-screen">
@@ -32,6 +36,7 @@ export function TitleScreen({
           {hasProgress ? (
             <>
               <button
+                ref={primaryActionRef}
                 className="title-screen__primary-action"
                 type="button"
                 onClick={onContinue}
@@ -44,6 +49,7 @@ export function TitleScreen({
             </>
           ) : (
             <button
+              ref={primaryActionRef}
               className="title-screen__primary-action"
               type="button"
               onClick={onStart}

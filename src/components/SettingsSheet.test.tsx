@@ -159,6 +159,45 @@ describe('SettingsSheet', () => {
     await waitFor(() => expect(opener).toHaveFocus())
   })
 
+  it('打开时隔离背景并把 Tab 焦点限制在对话框内', async () => {
+    const user = userEvent.setup()
+    render(<Harness initiallyOpen={false} />)
+    const opener = screen.getByRole('button', { name: '打开测试设置' })
+
+    await user.click(opener)
+
+    expect(opener).toHaveAttribute('inert')
+    const closeButton = screen.getByRole('button', { name: '关闭设置' })
+    const lastButton = screen.getByRole('button', { name: '清除全部收藏' })
+    expect(closeButton).toHaveFocus()
+
+    await user.tab({ shift: true })
+    expect(lastButton).toHaveFocus()
+
+    await user.tab()
+    expect(closeButton).toHaveFocus()
+
+    await user.click(closeButton)
+    expect(opener).not.toHaveAttribute('inert')
+  })
+
+  it('进入和取消二次确认时把焦点移到新出现的操作', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    await user.click(screen.getByRole('button', { name: '清除当前路线' }))
+    expect(
+      screen.getByRole('button', { name: '确认清除当前路线' }),
+    ).toHaveFocus()
+
+    await user.click(
+      screen.getByRole('button', { name: '取消清除当前路线' }),
+    )
+    expect(
+      screen.getByRole('button', { name: '清除当前路线' }),
+    ).toHaveFocus()
+  })
+
   it('点击关闭后恢复此前焦点，并在再次打开时重置确认态', async () => {
     const user = userEvent.setup()
     render(<Harness initiallyOpen={false} />)
