@@ -11,7 +11,10 @@ const choices: Choice[] = [
 ]
 
 describe('StoryStage', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllEnvs()
+  })
 
   it('显示标题、台词与装饰场景图', () => {
     render(
@@ -57,6 +60,28 @@ describe('StoryStage', () => {
 
     expect(container.querySelector('.story-stage__scene-image')).not.toBeInTheDocument()
     expect(container.querySelector('.scene-fallback')).toBeInTheDocument()
+  })
+
+  it('在 GitHub Pages 子路径下加载场景图', () => {
+    vi.stubEnv('BASE_URL', '/lights-still-burning-game/')
+
+    render(
+      <StoryStage
+        scene="station"
+        title="南站"
+        line={{ text: '列车已经进站。' }}
+        choices={[]}
+        onAdvance={vi.fn()}
+        onChoose={vi.fn()}
+        textSpeed="instant"
+        reducedMotion={false}
+      />,
+    )
+
+    expect(document.querySelector('.story-stage__scene-image')).toHaveAttribute(
+      'src',
+      '/lights-still-burning-game/images/scenes/station.webp',
+    )
   })
 
   it('逐字完成前隐藏选择，补全文后显示并回传选择', () => {

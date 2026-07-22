@@ -70,7 +70,7 @@ export function StoryStage({
         ) : (
           <img
             className="story-stage__scene-image"
-            src={`/images/scenes/${scene}.webp`}
+            src={`${import.meta.env.BASE_URL}images/scenes/${scene}.webp`}
             alt=""
             aria-hidden="true"
             onError={() => setFailedScene(scene)}
