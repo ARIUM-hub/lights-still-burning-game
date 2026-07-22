@@ -15,6 +15,8 @@ function renderTitleScreen(
     onRestart: vi.fn(),
     hasMemories: false,
     onOpenMemory: vi.fn(),
+    soundEnabled: false,
+    onToggleSound: vi.fn(),
     onOpenSettings: vi.fn(),
     ...overrides,
   }
@@ -68,5 +70,18 @@ describe('TitleScreen', () => {
     await user.click(screen.getByRole('button', { name: '雨夜回忆' }))
 
     expect(props.onOpenMemory).toHaveBeenCalledOnce()
+  })
+
+  it('提供可开启和关闭的直接声音入口', async () => {
+    const user = userEvent.setup()
+    const { props, rerender } = renderTitleScreen()
+
+    await user.click(screen.getByRole('button', { name: '开启声音' }))
+    expect(props.onToggleSound).toHaveBeenCalledOnce()
+
+    rerender(<TitleScreen {...props} soundEnabled />)
+    expect(
+      screen.getByRole('button', { name: '关闭声音' }),
+    ).toBeInTheDocument()
   })
 })

@@ -8,6 +8,8 @@ interface TitleScreenProps {
   onRestart(): void
   hasMemories: boolean
   onOpenMemory(): void
+  soundEnabled: boolean
+  onToggleSound(): void
   onOpenSettings(): void
   primaryActionRef?: Ref<HTMLButtonElement>
 }
@@ -20,6 +22,8 @@ export function TitleScreen({
   onRestart,
   hasMemories,
   onOpenMemory,
+  soundEnabled,
+  onToggleSound,
   onOpenSettings,
   primaryActionRef,
 }: TitleScreenProps) {
@@ -66,6 +70,9 @@ export function TitleScreen({
               雨夜回忆
             </button>
           ) : null}
+          <button type="button" onClick={onToggleSound}>
+            {soundEnabled ? '关闭声音' : '开启声音'}
+          </button>
           <button type="button" onClick={onOpenSettings}>
             设置
           </button>

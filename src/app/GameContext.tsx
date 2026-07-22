@@ -1,12 +1,15 @@
 import {
+  useCallback,
   createContext,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
 
+import { AudioDirector } from '../audio/AudioDirector'
 import { createInitialProgress } from '../engine/initialState'
 import { applyChoice, linesFor, resolveEnding } from '../engine/storyEngine'
 import type {
@@ -30,17 +33,21 @@ export interface GameApi {
   currentNode: StoryNode | null
   currentLines: DialogueLine[]
   currentEnding: EndingId | null
+  soundActive: boolean
   recoverableError: string | null
   startNewGame(): void
   continueGame(): void
   advance(): void
   choose(choiceId: string): void
   restartFromAct(act: number): void
-  updateSettings(patch: Partial<Settings>): void
+  updateSettings(patch: Partial<Omit<Settings, 'soundEnabled'>>): void
+  setSoundEnabled(enabled: boolean): Promise<boolean>
+  reportAudioFailure(): void
   clearRoute(): void
   clearAllProgress(): void
   leaveEnding(): void
   clearError(): void
+  audioDirector: AudioDirector
 }
 
 interface GameState {
@@ -115,8 +122,22 @@ function enterNode(
   }
 }
 
-export function GameProvider({ children }: { children: ReactNode }) {
+export function GameProvider({
+  children,
+  audioDirector: providedAudioDirector,
+}: {
+  children: ReactNode
+  audioDirector?: AudioDirector
+}) {
+  const audioDirectorRef = useRef<AudioDirector | null>(null)
+  if (audioDirectorRef.current === null) {
+    audioDirectorRef.current = providedAudioDirector ?? new AudioDirector()
+  }
+  const audioDirector = audioDirectorRef.current
   const [state, setState] = useState<GameState>(createInitialGameState)
+  const [soundActive, setSoundActive] = useState(() =>
+    audioDirector.isEnabled(),
+  )
 
   useEffect(() => {
     try {
@@ -132,6 +153,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       )
     }
   }, [state.save])
+
+  useEffect(
+    () => () => {
+      audioDirector.dispose()
+    },
+    [audioDirector],
+  )
 
   const currentNode = useMemo(() => {
     const progress = state.save.progress
@@ -312,7 +340,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  function updateSettings(patch: Partial<Settings>) {
+  function updateSettings(patch: Partial<Omit<Settings, 'soundEnabled'>>) {
+    if (patch.masterVolume !== undefined) {
+      audioDirector.setVolume(patch.masterVolume)
+    }
     setState((current) => ({
       save: {
         ...current.save,
@@ -324,6 +355,61 @@ export function GameProvider({ children }: { children: ReactNode }) {
       recoverableError: current.recoverableError,
     }))
   }
+
+  async function setSoundEnabled(enabled: boolean): Promise<boolean> {
+    if (!enabled) {
+      audioDirector.stopAll()
+      setSoundActive(false)
+      setState((current) => ({
+        save: {
+          ...current.save,
+          settings: {
+            ...current.save.settings,
+            soundEnabled: false,
+          },
+        },
+        recoverableError: current.recoverableError,
+      }))
+      return true
+    }
+
+    const didEnable = await audioDirector.enable()
+
+    if (didEnable) {
+      audioDirector.setVolume(state.save.settings.masterVolume)
+    }
+    setSoundActive(didEnable)
+
+    setState((current) => ({
+      save: {
+        ...current.save,
+        settings: {
+          ...current.save.settings,
+          soundEnabled: didEnable,
+        },
+      },
+      recoverableError: didEnable
+        ? null
+        : '声音无法启用，游戏已保持静音；你仍可继续阅读',
+    }))
+
+    return didEnable
+  }
+
+  const reportAudioFailure = useCallback(() => {
+    audioDirector.stopAll()
+    setSoundActive(false)
+    setState((current) => ({
+      save: {
+        ...current.save,
+        settings: {
+          ...current.save.settings,
+          soundEnabled: false,
+        },
+      },
+      recoverableError: '声音播放失败，游戏已自动静音；剧情可以继续',
+    }))
+  }, [audioDirector])
 
   function clearRoute() {
     setState((current) => ({
@@ -358,6 +444,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     currentNode,
     currentLines,
     currentEnding,
+    soundActive,
     recoverableError: state.recoverableError,
     startNewGame,
     continueGame,
@@ -365,10 +452,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     choose,
     restartFromAct,
     updateSettings,
+    setSoundEnabled,
+    reportAudioFailure,
     clearRoute,
     clearAllProgress,
     leaveEnding,
     clearError,
+    audioDirector,
   }
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>

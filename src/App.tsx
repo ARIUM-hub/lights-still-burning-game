@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { GameProvider, useGame } from './app/GameContext'
 import { SettingsSheet } from './components/SettingsSheet'
+import type { Settings } from './engine/types'
 import { EndingScreen } from './screens/EndingScreen'
 import { GameScreen } from './screens/GameScreen'
 import { MemoryScreen } from './screens/MemoryScreen'
@@ -15,10 +16,12 @@ function AppContent() {
     save,
     currentNode,
     currentEnding,
+    soundActive,
     recoverableError,
     startNewGame,
     continueGame,
     updateSettings,
+    setSoundEnabled,
     restartFromAct,
     clearRoute,
     clearAllProgress,
@@ -53,11 +56,13 @@ function AppContent() {
   }, [currentEnding])
 
   function handleStart() {
+    restoreSoundFromGesture()
     startNewGame()
     setView('game')
   }
 
   function handleContinue() {
+    restoreSoundFromGesture()
     continueGame()
     setView('game')
   }
@@ -82,13 +87,36 @@ function AppContent() {
   }
 
   function handleRestart() {
+    restoreSoundFromGesture()
     startNewGame()
     setView('game')
   }
 
   function handleReplay(act: number) {
+    restoreSoundFromGesture()
     restartFromAct(act)
     setView('game')
+  }
+
+  function handleSettingsChange(patch: Partial<Settings>) {
+    const { soundEnabled, ...otherSettings } = patch
+
+    if (soundEnabled !== undefined) {
+      void setSoundEnabled(soundEnabled)
+    }
+    if (Object.keys(otherSettings).length > 0) {
+      updateSettings(otherSettings)
+    }
+  }
+
+  function restoreSoundFromGesture() {
+    if (save.settings.soundEnabled && !soundActive) {
+      void setSoundEnabled(true)
+    }
+  }
+
+  function handleToggleSound() {
+    void setSoundEnabled(!soundActive)
   }
 
   let content
@@ -112,6 +140,8 @@ function AppContent() {
         onContinue={handleContinue}
         onRestart={handleStart}
         onOpenMemory={() => setView('memory')}
+        soundEnabled={soundActive}
+        onToggleSound={handleToggleSound}
         onOpenSettings={() => setSettingsOpen(true)}
         primaryActionRef={titleActionRef}
       />
@@ -137,6 +167,8 @@ function AppContent() {
         onContinue={handleContinue}
         onRestart={handleStart}
         onOpenMemory={() => setView('memory')}
+        soundEnabled={soundActive}
+        onToggleSound={handleToggleSound}
         onOpenSettings={() => setSettingsOpen(true)}
         primaryActionRef={titleActionRef}
       />
@@ -148,8 +180,8 @@ function AppContent() {
       {content}
       <SettingsSheet
         open={settingsOpen}
-        settings={save.settings}
-        onChange={updateSettings}
+        settings={{ ...save.settings, soundEnabled: soundActive }}
+        onChange={handleSettingsChange}
         onClose={() => setSettingsOpen(false)}
         onClearRoute={handleClearRoute}
         onClearAllProgress={handleClearAllProgress}

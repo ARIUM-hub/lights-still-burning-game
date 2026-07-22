@@ -7,6 +7,7 @@ import {
 import type { PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { AudioDirector } from '../audio/AudioDirector'
 import { createInitialProgress, createInitialSave } from '../engine/initialState'
 import type { SaveData } from '../engine/types'
 import { SAVE_KEY, writeSave } from '../state/saveRepository'
@@ -29,6 +30,14 @@ function saveAt(nodeId: string, lineIndex = 0): SaveData {
 
 function renderGame() {
   return renderHook(() => useGame(), { wrapper })
+}
+
+function renderGameWithAudio(audioDirector: AudioDirector) {
+  return renderHook(() => useGame(), {
+    wrapper: ({ children }: PropsWithChildren) => (
+      <GameProvider audioDirector={audioDirector}>{children}</GameProvider>
+    ),
+  })
 }
 
 function storedSave(): SaveData | null {
@@ -250,6 +259,90 @@ describe('GameProvider', () => {
       reducedMotion: false,
     })
     expect(result.current.save.progress?.nodeId).toBe('act3_photo')
+  })
+
+  it('音频成功启用后才保存声音开启状态和当前音量', async () => {
+    const enable = vi.fn().mockResolvedValue(true)
+    const setVolume = vi.fn()
+    const audioDirector = {
+      enable,
+      isEnabled: vi.fn(() => false),
+      setVolume,
+      stopAll: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+    const { result } = renderGameWithAudio(audioDirector)
+
+    await act(async () => {
+      await expect(result.current.setSoundEnabled(true)).resolves.toBe(true)
+    })
+
+    expect(enable).toHaveBeenCalledOnce()
+    expect(setVolume).toHaveBeenCalledWith(0.45)
+    expect(result.current.save.settings.soundEnabled).toBe(true)
+    expect(result.current.soundActive).toBe(true)
+  })
+
+  it('音频启用失败时保持静音并提供可恢复提示', async () => {
+    const audioDirector = {
+      enable: vi.fn().mockResolvedValue(false),
+      isEnabled: vi.fn(() => false),
+      setVolume: vi.fn(),
+      stopAll: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+    const { result } = renderGameWithAudio(audioDirector)
+
+    await act(async () => {
+      await expect(result.current.setSoundEnabled(true)).resolves.toBe(false)
+    })
+
+    expect(result.current.save.settings.soundEnabled).toBe(false)
+    expect(result.current.soundActive).toBe(false)
+    expect(result.current.recoverableError).toContain('声音无法启用')
+  })
+
+  it('关闭声音时立即停止全部声音层', async () => {
+    const stopAll = vi.fn()
+    const audioDirector = {
+      enable: vi.fn().mockResolvedValue(true),
+      isEnabled: vi.fn(() => true),
+      setVolume: vi.fn(),
+      stopAll,
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+    const save = createInitialSave()
+    save.settings.soundEnabled = true
+    writeSave(save)
+    const { result } = renderGameWithAudio(audioDirector)
+
+    await act(async () => {
+      await expect(result.current.setSoundEnabled(false)).resolves.toBe(true)
+    })
+
+    expect(stopAll).toHaveBeenCalled()
+    expect(result.current.save.settings.soundEnabled).toBe(false)
+    expect(result.current.soundActive).toBe(false)
+  })
+
+  it('读取声音偏好时不会在用户动作前自动创建音频上下文', () => {
+    const save = createInitialSave()
+    save.settings.soundEnabled = true
+    writeSave(save)
+    const enable = vi.fn().mockResolvedValue(true)
+    const audioDirector = {
+      enable,
+      isEnabled: vi.fn(() => false),
+      setVolume: vi.fn(),
+      stopAll: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+
+    const { result } = renderGameWithAudio(audioDirector)
+
+    expect(enable).not.toHaveBeenCalled()
+    expect(result.current.save.settings.soundEnabled).toBe(true)
+    expect(result.current.soundActive).toBe(false)
   })
 
   it('清除当前路线时保留收藏与设置', () => {

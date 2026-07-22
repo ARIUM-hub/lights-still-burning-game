@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 import { useGame } from '../app/GameContext'
 import { StoryStage } from '../components/StoryStage'
 import { TopBar } from '../components/TopBar'
@@ -28,10 +30,58 @@ export function GameScreen({
     advance,
     choose,
     clearRoute,
+    audioDirector,
+    soundActive,
+    setSoundEnabled,
+    reportAudioFailure,
   } = useGame()
   const progress = save.progress
   const currentLine =
     progress === null ? undefined : currentLines[progress.lineIndex]
+  const hasPlayedStoreChime = useRef(false)
+  const ambience = currentNode?.ambience
+  const scene = currentNode?.scene
+
+  useEffect(() => {
+    audioDirector.setVolume(save.settings.masterVolume)
+  }, [audioDirector, save.settings.masterVolume])
+
+  useEffect(() => {
+    if (!soundActive) {
+      audioDirector.stopAll()
+      return
+    }
+
+    if (ambience !== undefined) {
+      audioDirector.playAmbience(ambience)
+      if (!audioDirector.isEnabled()) reportAudioFailure()
+    }
+  }, [
+    ambience,
+    audioDirector,
+    reportAudioFailure,
+    soundActive,
+  ])
+
+  useEffect(() => {
+    if (
+      soundActive &&
+      audioDirector.isEnabled() &&
+      scene === 'store' &&
+      !hasPlayedStoreChime.current
+    ) {
+      hasPlayedStoreChime.current = true
+      audioDirector.playDoorChime()
+      if (!audioDirector.isEnabled()) reportAudioFailure()
+    }
+  }, [audioDirector, reportAudioFailure, scene, soundActive])
+
+  useEffect(
+    () => () => {
+      audioDirector.stopAll()
+    },
+    [audioDirector],
+  )
 
   const status = recoverableError === null ? null : (
     <p className="game-screen__status" role="status" aria-live="polite">
@@ -76,6 +126,22 @@ export function GameScreen({
 
   const isLastLine = progress.lineIndex === currentLines.length - 1
 
+  function restoreSoundFromGesture() {
+    if (save.settings.soundEnabled && !soundActive) {
+      void setSoundEnabled(true)
+    }
+  }
+
+  function handleAdvance() {
+    restoreSoundFromGesture()
+    advance()
+  }
+
+  function handleChoose(choiceId: string) {
+    restoreSoundFromGesture()
+    choose(choiceId)
+  }
+
   return (
     <main className="game-screen">
       <TopBar
@@ -89,8 +155,8 @@ export function GameScreen({
         title={currentNode.title}
         line={currentLine}
         choices={isLastLine ? (currentNode.choices ?? []) : []}
-        onAdvance={advance}
-        onChoose={choose}
+        onAdvance={handleAdvance}
+        onChoose={handleChoose}
         textSpeed={save.settings.textSpeed}
         reducedMotion={save.settings.reducedMotion}
       />

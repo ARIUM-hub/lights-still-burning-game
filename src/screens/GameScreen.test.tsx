@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { vi } from 'vitest'
 
 import { GameProvider } from '../app/GameContext'
+import type { AudioDirector } from '../audio/AudioDirector'
 import { createInitialProgress, createInitialSave } from '../engine/initialState'
 import type { SaveData } from '../engine/types'
 import { SAVE_KEY, writeSave } from '../state/saveRepository'
@@ -25,9 +26,12 @@ function saveAt(nodeId: string, lineIndex: number): SaveData {
   return save
 }
 
-function renderGameScreen(onOpenSettings = vi.fn()) {
+function renderGameScreen(
+  onOpenSettings = vi.fn(),
+  audioDirector?: AudioDirector,
+) {
   return render(
-    <GameProvider>
+    <GameProvider audioDirector={audioDirector}>
       <GameScreen onOpenSettings={onOpenSettings} />
     </GameProvider>,
   )
@@ -104,6 +108,109 @@ describe('GameScreen', () => {
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(SAVE_KEY)!) as SaveData
       expect(stored.progress).toBeNull()
+    })
+  })
+
+  it('声音开启时播放节点环境音并在首次进入便利店时播放门铃', () => {
+    const save = saveAt('act2_meeting', 0)
+    save.settings.soundEnabled = true
+    writeSave(save)
+    const playAmbience = vi.fn()
+    const playDoorChime = vi.fn()
+    const audioDirector = {
+      isEnabled: vi.fn(() => true),
+      setVolume: vi.fn(),
+      playAmbience,
+      playDoorChime,
+      stopAll: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+
+    const view = renderGameScreen(vi.fn(), audioDirector)
+    view.rerender(
+      <GameProvider audioDirector={audioDirector}>
+        <GameScreen onOpenSettings={vi.fn()} />
+      </GameProvider>,
+    )
+
+    expect(playAmbience).toHaveBeenCalledOnce()
+    expect(playAmbience).toHaveBeenCalledWith('store')
+    expect(playDoorChime).toHaveBeenCalledOnce()
+  })
+
+  it('声音关闭时不请求播放环境音或门铃', () => {
+    writeSave(saveAt('act2_meeting', 0))
+    const playAmbience = vi.fn()
+    const playDoorChime = vi.fn()
+    const audioDirector = {
+      isEnabled: vi.fn(() => false),
+      setVolume: vi.fn(),
+      playAmbience,
+      playDoorChime,
+      stopAll: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+
+    renderGameScreen(vi.fn(), audioDirector)
+
+    expect(playAmbience).not.toHaveBeenCalled()
+    expect(playDoorChime).not.toHaveBeenCalled()
+  })
+
+  it('刷新后在首次推进剧情的用户动作中恢复已保存的声音偏好', async () => {
+    const save = saveAt('act1_opening', 0)
+    save.settings.soundEnabled = true
+    writeSave(save)
+    let active = false
+    const enable = vi.fn(async () => {
+      active = true
+      return true
+    })
+    const playAmbience = vi.fn()
+    const audioDirector = {
+      enable,
+      isEnabled: vi.fn(() => active),
+      setVolume: vi.fn(),
+      playAmbience,
+      playDoorChime: vi.fn(),
+      stopAll: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+    renderGameScreen(vi.fn(), audioDirector)
+
+    expect(enable).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '推进剧情' }))
+
+    await waitFor(() => expect(enable).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(playAmbience).toHaveBeenCalledWith('rain'),
+    )
+  })
+
+  it('运行时播放失败后同步回退声音状态并显示恢复提示', async () => {
+    const save = saveAt('act1_opening', 0)
+    save.settings.soundEnabled = true
+    writeSave(save)
+    let active = true
+    const audioDirector = {
+      enable: vi.fn().mockResolvedValue(true),
+      isEnabled: vi.fn(() => active),
+      setVolume: vi.fn(),
+      playAmbience: vi.fn(() => {
+        active = false
+      }),
+      playDoorChime: vi.fn(),
+      stopAll: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as AudioDirector
+    renderGameScreen(vi.fn(), audioDirector)
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '声音播放失败',
+    )
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(SAVE_KEY)!) as SaveData
+      expect(stored.settings.soundEnabled).toBe(false)
     })
   })
 })
