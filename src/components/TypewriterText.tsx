@@ -15,6 +15,16 @@ const SPEED_INTERVALS: Record<Settings['textSpeed'], number> = {
   instant: 0,
 }
 
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+function getSystemReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(REDUCED_MOTION_QUERY).matches
+  )
+}
+
 export interface TypewriterHandle {
   revealAll(): boolean
 }
@@ -39,7 +49,10 @@ export const TypewriterText = forwardRef<
   ref,
 ) {
   const characters = useMemo(() => Array.from(text), [text])
-  const isInstant = speed === 'instant' || reducedMotion
+  const [systemReducedMotion, setSystemReducedMotion] = useState(
+    getSystemReducedMotion,
+  )
+  const isInstant = speed === 'instant' || reducedMotion || systemReducedMotion
   const [progress, setProgress] = useState<TextProgress>(() => ({
     text,
     count: isInstant ? characters.length : 0,
@@ -70,6 +83,20 @@ export const TypewriterText = forwardRef<
   }
 
   useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+
+    const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY)
+    const handleChange = (event: MediaQueryListEvent) => {
+      setSystemReducedMotion(event.matches)
+    }
+
+    setSystemReducedMotion(mediaQuery.matches)
+    mediaQuery.addEventListener('change', handleChange)
+
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  useEffect(() => {
     setProgress({
       text,
       count: isInstant ? characters.length : 0,
@@ -98,7 +125,7 @@ export const TypewriterText = forwardRef<
 
     scheduleNextCharacter()
     return clearTimer
-  }, [text, speed, reducedMotion])
+  }, [text, speed, reducedMotion, systemReducedMotion])
 
   useEffect(() => {
     if (

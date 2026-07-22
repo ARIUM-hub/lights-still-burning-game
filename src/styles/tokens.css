@@ -1,0 +1,31 @@
+:root {
+  color-scheme: dark;
+  --color-bg: #070d17;
+  --color-surface: rgba(8, 14, 24, 0.88);
+  --color-surface-soft: rgba(17, 27, 42, 0.72);
+  --color-surface-solid: #111b2a;
+  --color-text: #f1f5f9;
+  --color-muted: #a9b5c6;
+  --color-accent: #d8a15d;
+  --color-accent-strong: #f0b96f;
+  --color-border: rgba(216, 161, 93, 0.42);
+  --color-divider: rgba(169, 181, 198, 0.2);
+  --color-danger: #f87171;
+  --color-focus: #f8cf91;
+  --shadow-dialogue: 0 16px 48px rgba(0, 0, 0, 0.36);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --duration-press: 120ms;
+  --duration-fast: 160ms;
+  --duration-normal: 260ms;
+  --font-literary: "Noto Serif SC", "Songti SC", STSong, serif;
+  --font-ui: Inter, "Microsoft YaHei", system-ui, sans-serif;
+}

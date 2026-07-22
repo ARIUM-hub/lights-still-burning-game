@@ -142,6 +142,7 @@ function AppContent() {
         onOpenMemory={() => setView('memory')}
         soundEnabled={soundActive}
         onToggleSound={handleToggleSound}
+        reducedMotion={save.settings.reducedMotion}
         onOpenSettings={() => setSettingsOpen(true)}
         primaryActionRef={titleActionRef}
       />
@@ -169,6 +170,7 @@ function AppContent() {
         onOpenMemory={() => setView('memory')}
         soundEnabled={soundActive}
         onToggleSound={handleToggleSound}
+        reducedMotion={save.settings.reducedMotion}
         onOpenSettings={() => setSettingsOpen(true)}
         primaryActionRef={titleActionRef}
       />

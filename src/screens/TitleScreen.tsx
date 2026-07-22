@@ -10,6 +10,7 @@ interface TitleScreenProps {
   onOpenMemory(): void
   soundEnabled: boolean
   onToggleSound(): void
+  reducedMotion: boolean
   onOpenSettings(): void
   primaryActionRef?: Ref<HTMLButtonElement>
 }
@@ -24,11 +25,15 @@ export function TitleScreen({
   onOpenMemory,
   soundEnabled,
   onToggleSound,
+  reducedMotion,
   onOpenSettings,
   primaryActionRef,
 }: TitleScreenProps) {
   return (
-    <main className="title-screen">
+    <main
+      className="title-screen"
+      data-reduced-motion={reducedMotion ? 'true' : undefined}
+    >
       <section className="title-screen__content" aria-labelledby="story-title">
         <h1 id="story-title" className="title-screen__title">
           灯火未熄

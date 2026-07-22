@@ -59,6 +59,7 @@ export function StoryStage({
   return (
     <section
       className={`story-stage story-stage--${scene}`}
+      data-reduced-motion={reducedMotion ? 'true' : undefined}
       aria-label={`剧情场景：${title}`}
       tabIndex={0}
       onKeyDown={handleKeyDown}

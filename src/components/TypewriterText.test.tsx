@@ -11,6 +11,7 @@ describe('TypewriterText', () => {
   afterEach(() => {
     cleanup()
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('normal 按 32ms 逐个显示 Unicode 字符', () => {
@@ -64,6 +65,72 @@ describe('TypewriterText', () => {
     )
 
     expect(screen.getByTestId('typewriter')).toHaveTextContent('立即显示')
+  })
+
+  it('系统要求减少动态时立即显示全文', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({
+        matches: true,
+        media: '(prefers-reduced-motion: reduce)',
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    )
+
+    render(
+      <TypewriterText
+        text="尊重系统设置"
+        speed="normal"
+        reducedMotion={false}
+        onDone={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('typewriter')).toHaveTextContent('尊重系统设置')
+  })
+
+  it('系统减少动态偏好变化时停止逐字动画并清理监听器', () => {
+    vi.useFakeTimers()
+    let onChange: ((event: MediaQueryListEvent) => void) | undefined
+    const removeEventListener = vi.fn()
+    const mediaQuery = {
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+      onchange: null,
+      addEventListener: vi.fn(
+        (_type: string, listener: (event: MediaQueryListEvent) => void) => {
+          onChange = listener
+        },
+      ),
+      removeEventListener,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }
+    vi.stubGlobal('matchMedia', vi.fn(() => mediaQuery))
+
+    const { unmount } = render(
+      <TypewriterText
+        text="跟随系统变化"
+        speed="normal"
+        reducedMotion={false}
+        onDone={vi.fn()}
+      />,
+    )
+    expect(screen.getByTestId('typewriter')).toHaveTextContent('')
+
+    act(() => onChange?.({ matches: true } as MediaQueryListEvent))
+
+    expect(screen.getByTestId('typewriter')).toHaveTextContent('跟随系统变化')
+    expect(vi.getTimerCount()).toBe(0)
+
+    unmount()
+    expect(removeEventListener).toHaveBeenCalledWith('change', onChange)
   })
 
   it('text 变化时从新文本开头重新播放', () => {

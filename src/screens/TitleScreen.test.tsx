@@ -17,6 +17,7 @@ function renderTitleScreen(
     onOpenMemory: vi.fn(),
     soundEnabled: false,
     onToggleSound: vi.fn(),
+    reducedMotion: false,
     onOpenSettings: vi.fn(),
     ...overrides,
   }
@@ -83,5 +84,14 @@ describe('TitleScreen', () => {
     expect(
       screen.getByRole('button', { name: '关闭声音' }),
     ).toBeInTheDocument()
+  })
+
+  it('游戏内减少动态开启时标记标题雨幕', () => {
+    const { container } = renderTitleScreen({ reducedMotion: true })
+
+    expect(container.querySelector('.title-screen')).toHaveAttribute(
+      'data-reduced-motion',
+      'true',
+    )
   })
 })
