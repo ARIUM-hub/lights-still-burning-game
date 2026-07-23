@@ -30,7 +30,7 @@ export type AmbienceId =
   | 'train'
 
 export interface DialogueLine {
-  speaker?: '小丑' | '小美' | '大壮' | '小丽' | '小帅'
+  speaker?: string
   text: string
 }
 
@@ -90,9 +90,15 @@ export interface Settings {
   reducedMotion: boolean
 }
 
+export interface CharacterNames {
+  protagonist: string
+  heroine: string
+}
+
 export interface SaveData {
   schemaVersion: 1
   progress: StoryProgress | null
   unlockedEndings: EndingId[]
   settings: Settings
+  characterNames: CharacterNames
 }

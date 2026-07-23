@@ -1,10 +1,12 @@
 import { createInitialSave } from '../engine/initialState'
 import type {
+  CharacterNames,
   EndingId,
   SaveData,
   Settings,
   StoryProgress,
 } from '../engine/types'
+import { normalizeCharacterNames } from '../story/characterNames'
 
 export const SAVE_KEY = 'lights-still-burning.save'
 
@@ -51,10 +53,7 @@ function isStoryProgress(value: unknown): value is StoryProgress {
 }
 
 function isEndingId(value: unknown): value is EndingId {
-  return (
-    typeof value === 'string' &&
-    endingIds.includes(value as EndingId)
-  )
+  return typeof value === 'string' && endingIds.includes(value as EndingId)
 }
 
 function isSettings(value: unknown): value is Settings {
@@ -72,15 +71,36 @@ function isSettings(value: unknown): value is Settings {
   )
 }
 
-function isSaveData(value: unknown): value is SaveData {
-  return (
-    isRecord(value) &&
-    value.schemaVersion === 1 &&
-    (value.progress === null || isStoryProgress(value.progress)) &&
-    Array.isArray(value.unlockedEndings) &&
-    value.unlockedEndings.every(isEndingId) &&
-    isSettings(value.settings)
-  )
+function readCharacterNames(value: unknown): CharacterNames {
+  if (!isRecord(value)) {
+    return normalizeCharacterNames(undefined)
+  }
+
+  return normalizeCharacterNames({
+    protagonist:
+      typeof value.protagonist === 'string' ? value.protagonist : undefined,
+    heroine: typeof value.heroine === 'string' ? value.heroine : undefined,
+  })
+}
+
+function normalizeSaveData(value: unknown): SaveData | null {
+  if (!isRecord(value) || value.schemaVersion !== 1) return null
+  if (value.progress !== null && !isStoryProgress(value.progress)) return null
+  if (
+    !Array.isArray(value.unlockedEndings) ||
+    !value.unlockedEndings.every(isEndingId)
+  ) {
+    return null
+  }
+  if (!isSettings(value.settings)) return null
+
+  return {
+    schemaVersion: 1,
+    progress: value.progress,
+    unlockedEndings: [...value.unlockedEndings],
+    settings: value.settings,
+    characterNames: readCharacterNames(value.characterNames),
+  }
 }
 
 export function loadSave(): SaveData {
@@ -89,7 +109,7 @@ export function loadSave(): SaveData {
     if (stored === null) return createInitialSave()
 
     const parsed: unknown = JSON.parse(stored)
-    return isSaveData(parsed) ? parsed : createInitialSave()
+    return normalizeSaveData(parsed) ?? createInitialSave()
   } catch {
     return createInitialSave()
   }
@@ -104,6 +124,7 @@ export function clearCurrentRoute(save: SaveData): SaveData {
     ...save,
     progress: null,
     unlockedEndings: [...save.unlockedEndings],
+    characterNames: { ...save.characterNames },
   }
 }
 
@@ -112,5 +133,6 @@ export function clearCollection(save: SaveData): SaveData {
     ...save,
     progress: null,
     unlockedEndings: [],
+    characterNames: { ...save.characterNames },
   }
 }

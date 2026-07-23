@@ -1,9 +1,11 @@
-import type { EndingId } from '../engine/types'
+import type { CharacterNames, EndingId } from '../engine/types'
+import { replaceCharacterNames } from '../story/characterNames'
 import { endings, hiddenMonologue } from '../story/endings'
 
 interface MemoryScreenProps {
   unlocked: EndingId[]
   completedActs: number[]
+  characterNames: CharacterNames
   onReplay(act: number): void
   onBack(): void
 }
@@ -21,6 +23,7 @@ const ACT_LABELS = ['第一幕', '第二幕', '第三幕', '第四幕', '第五�
 export function MemoryScreen({
   unlocked,
   completedActs,
+  characterNames,
   onReplay,
   onBack,
 }: MemoryScreenProps) {
@@ -59,7 +62,9 @@ export function MemoryScreen({
                   {isUnlocked ? (
                     <>
                       <h2>{ending.title}</h2>
-                      <p>{ending.summary}</p>
+                      <p>
+                        {replaceCharacterNames(ending.summary, characterNames)}
+                      </p>
                     </>
                   ) : (
                     <p className="memory-ticket__locked-label">尚未抵达</p>
@@ -78,7 +83,9 @@ export function MemoryScreen({
         >
           <h2 id="hidden-monologue-title">灯火之后</h2>
           {hiddenMonologue.split('\n').map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
+            <p key={paragraph}>
+              {replaceCharacterNames(paragraph, characterNames)}
+            </p>
           ))}
         </section>
       ) : null}

@@ -12,6 +12,8 @@ interface TitleScreenProps {
   onToggleSound(): void
   reducedMotion: boolean
   onOpenSettings(): void
+  hasWorkshop?: boolean
+  onOpenWorkshop?(): void
   primaryActionRef?: Ref<HTMLButtonElement>
 }
 
@@ -27,6 +29,8 @@ export function TitleScreen({
   onToggleSound,
   reducedMotion,
   onOpenSettings,
+  hasWorkshop = false,
+  onOpenWorkshop = () => undefined,
   primaryActionRef,
 }: TitleScreenProps) {
   return (
@@ -73,6 +77,11 @@ export function TitleScreen({
           {hasMemories ? (
             <button type="button" onClick={onOpenMemory}>
               雨夜回忆
+            </button>
+          ) : null}
+          {hasWorkshop ? (
+            <button type="button" onClick={onOpenWorkshop}>
+              AI故事工坊
             </button>
           ) : null}
           <button type="button" onClick={onToggleSound}>

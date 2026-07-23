@@ -519,6 +519,10 @@ describe('createInitialSave', () => {
         schemaVersion: 1,
         progress: null,
         unlockedEndings: [],
+        characterNames: {
+          protagonist: '小丑',
+          heroine: '小美',
+        },
         settings: {
           soundEnabled: false,
           masterVolume: 0.45,

@@ -13,6 +13,7 @@ import { AudioDirector } from '../audio/AudioDirector'
 import { createInitialProgress } from '../engine/initialState'
 import { applyChoice, linesFor, resolveEnding } from '../engine/storyEngine'
 import type {
+  CharacterNames,
   DialogueLine,
   EndingId,
   SaveData,
@@ -26,6 +27,7 @@ import {
   loadSave,
   writeSave,
 } from '../state/saveRepository'
+import { applyCharacterNamesToLines, normalizeCharacterNames } from '../story/characterNames'
 import { story } from '../story'
 
 export interface GameApi {
@@ -41,6 +43,7 @@ export interface GameApi {
   choose(choiceId: string): void
   restartFromAct(act: number): void
   updateSettings(patch: Partial<Omit<Settings, 'soundEnabled'>>): void
+  updateCharacterNames(patch: Partial<CharacterNames>): void
   setSoundEnabled(enabled: boolean): Promise<boolean>
   reportAudioFailure(): void
   clearRoute(): void
@@ -172,8 +175,11 @@ export function GameProvider({
 
     return progress === null || currentNode === null
       ? []
-      : linesFor(currentNode, progress)
-  }, [currentNode, state.save.progress])
+      : applyCharacterNamesToLines(
+          linesFor(currentNode, progress),
+          state.save.characterNames,
+        )
+  }, [currentNode, state.save.characterNames, state.save.progress])
 
   const currentEnding = useMemo(() => {
     const progress = state.save.progress
@@ -356,6 +362,19 @@ export function GameProvider({
     }))
   }
 
+  function updateCharacterNames(patch: Partial<CharacterNames>) {
+    setState((current) => ({
+      save: {
+        ...current.save,
+        characterNames: {
+          ...current.save.characterNames,
+          ...patch,
+        },
+      },
+      recoverableError: current.recoverableError,
+    }))
+  }
+
   async function setSoundEnabled(enabled: boolean): Promise<boolean> {
     if (!enabled) {
       audioDirector.stopAll()
@@ -452,6 +471,7 @@ export function GameProvider({
     choose,
     restartFromAct,
     updateSettings,
+    updateCharacterNames,
     setSoundEnabled,
     reportAudioFailure,
     clearRoute,

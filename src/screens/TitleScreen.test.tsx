@@ -86,6 +86,13 @@ describe('TitleScreen', () => {
     ).toBeInTheDocument()
   })
 
+  it('标题页不再直接展示男女主命名输入框', () => {
+    renderTitleScreen()
+
+    expect(screen.queryByLabelText('男主名字')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('女主名字')).not.toBeInTheDocument()
+  })
+
   it('游戏内减少动态开启时标记标题雨幕', () => {
     const { container } = renderTitleScreen({ reducedMotion: true })
 

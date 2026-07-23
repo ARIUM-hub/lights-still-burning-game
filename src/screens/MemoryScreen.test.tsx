@@ -13,6 +13,11 @@ const allEndings: EndingId[] = [
   'next-city',
 ]
 
+const defaultNames = {
+  protagonist: '小丑',
+  heroine: '小美',
+}
+
 describe('MemoryScreen', () => {
   afterEach(cleanup)
 
@@ -21,6 +26,7 @@ describe('MemoryScreen', () => {
       <MemoryScreen
         unlocked={['train-gone']}
         completedActs={[]}
+        characterNames={defaultNames}
         onReplay={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -30,7 +36,7 @@ describe('MemoryScreen', () => {
     expect(screen.getByText('列车已经开走')).toBeInTheDocument()
     expect(screen.queryByText('下一座城市')).not.toBeInTheDocument()
     expect(screen.getAllByLabelText('尚未抵达')).toHaveLength(4)
-    expect(screen.queryByText(/真正让我失去她/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/真正让我失去她的/)).not.toBeInTheDocument()
   })
 
   it('集齐五个结局后显示隐藏独白', () => {
@@ -38,13 +44,16 @@ describe('MemoryScreen', () => {
       <MemoryScreen
         unlocked={allEndings}
         completedActs={[]}
+        characterNames={defaultNames}
         onReplay={vi.fn()}
         onBack={vi.fn()}
       />,
     )
 
     expect(screen.getByText('5 / 5')).toBeInTheDocument()
-    expect(screen.getByText(/真正让我失去她的，从来不是那一班列车/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/真正让我失去她的，从来不是那一班列车。/),
+    ).toBeInTheDocument()
   })
 
   it('重复的结局记录只计数一次', () => {
@@ -52,6 +61,7 @@ describe('MemoryScreen', () => {
       <MemoryScreen
         unlocked={['train-gone', 'train-gone']}
         completedActs={[]}
+        characterNames={defaultNames}
         onReplay={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -66,6 +76,7 @@ describe('MemoryScreen', () => {
       <MemoryScreen
         unlocked={[]}
         completedActs={[1, 2]}
+        characterNames={defaultNames}
         onReplay={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -79,6 +90,7 @@ describe('MemoryScreen', () => {
       <MemoryScreen
         unlocked={['train-gone']}
         completedActs={[]}
+        characterNames={defaultNames}
         onReplay={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -96,6 +108,7 @@ describe('MemoryScreen', () => {
       <MemoryScreen
         unlocked={['train-gone']}
         completedActs={[]}
+        characterNames={defaultNames}
         onReplay={onReplay}
         onBack={onBack}
       />,
@@ -107,4 +120,5 @@ describe('MemoryScreen', () => {
     expect(onReplay).toHaveBeenCalledWith(4)
     expect(onBack).toHaveBeenCalledOnce()
   })
+
 })

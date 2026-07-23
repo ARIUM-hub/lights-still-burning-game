@@ -33,6 +33,13 @@ describe('App', () => {
     await user.click(
       screen.getByRole('button', { name: '开始故事' }),
     )
+    expect(screen.getByRole('heading', { name: '主角命名' })).toBeInTheDocument()
+    expect(screen.getByLabelText('男主名字')).toHaveValue('小丑')
+    expect(screen.getByLabelText('女主名字')).toHaveValue('小美')
+
+    await user.click(
+      screen.getByRole('button', { name: '带着名字开始故事' }),
+    )
 
     expect(
       screen.getByRole('region', { name: '剧情场景：高架桥下的灯' }),
@@ -66,10 +73,28 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: '开始故事' }))
+    await user.click(
+      screen.getByRole('button', { name: '带着名字开始故事' }),
+    )
 
     expect(
       screen.getByRole('region', { name: '剧情场景：高架桥下的灯' }),
     ).toBeInTheDocument()
+  })
+
+  it('命名页返回标题时不会保存未确认的名字修改', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '开始故事' }))
+    await user.clear(screen.getByLabelText('男主名字'))
+    await user.type(screen.getByLabelText('男主名字'), '周岚')
+    await user.click(screen.getByRole('button', { name: '返回标题' }))
+
+    expect(screen.getByRole('heading', { name: '灯火未熄' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '开始故事' }))
+    expect(screen.getByLabelText('男主名字')).toHaveValue('小丑')
   })
 
   it('可以从标题页和游戏页打开同一个设置面板', async () => {
@@ -81,6 +106,9 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '关闭设置' }))
 
     await user.click(screen.getByRole('button', { name: '开始故事' }))
+    await user.click(
+      screen.getByRole('button', { name: '带着名字开始故事' }),
+    )
     await user.click(screen.getByRole('button', { name: '打开设置' }))
 
     expect(screen.getByRole('dialog', { name: '设置' })).toBeInTheDocument()

@@ -1,4 +1,11 @@
-import type { SaveData, StoryProgress } from './types'
+import type { CharacterNames, SaveData, StoryProgress } from './types'
+
+export function createDefaultCharacterNames(): CharacterNames {
+  return {
+    protagonist: '小丑',
+    heroine: '小美',
+  }
+}
 
 export function createInitialProgress(
   nodeId = 'act1_opening',
@@ -37,5 +44,6 @@ export function createInitialSave(): SaveData {
       textSpeed: 'normal',
       reducedMotion,
     },
+    characterNames: createDefaultCharacterNames(),
   }
 }
