@@ -32,6 +32,8 @@ jobs:
       - name: Run unit tests
         run: npm test
       - name: Build Pages artifact
+        env:
+          VITE_AI_PROXY_URL: ${{ vars.AI_PROXY_URL }}
         run: npm run build:pages
       - name: Configure Pages
         uses: actions/configure-pages@v5
