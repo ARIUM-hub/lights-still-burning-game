@@ -38,7 +38,7 @@ export function AiWorkshopScreen({
             请求生成同类气质的新分支故事。
           </p>
           <p className="ai-workshop-screen__hint">
-            生成新故事需要先启动本地 AI 服务。
+            生成新故事后可直接开始试玩。
           </p>
         </header>
 

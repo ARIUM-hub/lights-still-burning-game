@@ -32,7 +32,7 @@ describe('AI 故事工坊入口', () => {
     expect(screen.queryByLabelText('模型名称')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('API Key')).not.toBeInTheDocument()
     expect(
-      screen.getByText('生成新故事需要先启动本地 AI 服务。'),
+      screen.getByText('生成新故事后可直接开始试玩。'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: '生成新故事' }),
