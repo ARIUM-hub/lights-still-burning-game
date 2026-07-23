@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "node --env-file=.env.local --import tsx server/index.ts",
+    "start": "npm run start:server",
     "start:server": "node --import tsx server/index.ts",
     "build": "tsc --noEmit && vite build",
     "build:pages": "tsc --noEmit && vite build --base=/lights-still-burning-game/",
