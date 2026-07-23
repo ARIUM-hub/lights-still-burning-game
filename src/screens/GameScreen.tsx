@@ -1,0 +1,165 @@
+import { useEffect, useRef } from 'react'
+
+import { useGame } from '../app/GameContext'
+import { StoryStage } from '../components/StoryStage'
+import { TopBar } from '../components/TopBar'
+import type { StoryNode } from '../engine/types'
+
+const ACT_LABELS: Record<StoryNode['act'], string> = {
+  1: '第一幕',
+  2: '第二幕',
+  3: '第三幕',
+  4: '第四幕',
+  5: '第五幕',
+}
+
+export function chapterLabel(act: StoryNode['act']): string {
+  return ACT_LABELS[act]
+}
+
+export function GameScreen({
+  onOpenSettings,
+}: {
+  onOpenSettings(): void
+}) {
+  const {
+    save,
+    currentNode,
+    currentLines,
+    recoverableError,
+    advance,
+    choose,
+    clearRoute,
+    audioDirector,
+    soundActive,
+    setSoundEnabled,
+    reportAudioFailure,
+  } = useGame()
+  const progress = save.progress
+  const currentLine =
+    progress === null ? undefined : currentLines[progress.lineIndex]
+  const hasPlayedStoreChime = useRef(false)
+  const ambience = currentNode?.ambience
+  const scene = currentNode?.scene
+
+  useEffect(() => {
+    audioDirector.setVolume(save.settings.masterVolume)
+  }, [audioDirector, save.settings.masterVolume])
+
+  useEffect(() => {
+    if (!soundActive) {
+      audioDirector.stopAll()
+      return
+    }
+
+    if (ambience !== undefined) {
+      audioDirector.playAmbience(ambience)
+      if (!audioDirector.isEnabled()) reportAudioFailure()
+    }
+  }, [
+    ambience,
+    audioDirector,
+    reportAudioFailure,
+    soundActive,
+  ])
+
+  useEffect(() => {
+    if (
+      soundActive &&
+      audioDirector.isEnabled() &&
+      scene === 'store' &&
+      !hasPlayedStoreChime.current
+    ) {
+      hasPlayedStoreChime.current = true
+      audioDirector.playDoorChime()
+      if (!audioDirector.isEnabled()) reportAudioFailure()
+    }
+  }, [audioDirector, reportAudioFailure, scene, soundActive])
+
+  useEffect(
+    () => () => {
+      audioDirector.stopAll()
+    },
+    [audioDirector],
+  )
+
+  const status = recoverableError === null ? null : (
+    <p className="game-screen__status" role="status" aria-live="polite">
+      {recoverableError}
+    </p>
+  )
+
+  if (progress === null || currentNode === null) {
+    return (
+      <main className="game-screen game-screen--recovery">
+        {status}
+        <section aria-label="剧情恢复" className="game-screen__recovery">
+          <h1>灯火未熄</h1>
+          <p>当前剧情暂时无法读取。</p>
+          <button type="button" onClick={clearRoute}>
+            返回标题
+          </button>
+        </section>
+      </main>
+    )
+  }
+
+  if (currentLine === undefined) {
+    return (
+      <main className="game-screen game-screen--recovery">
+        <TopBar
+          chapter={chapterLabel(currentNode.act)}
+          title={currentNode.title}
+          onOpenSettings={onOpenSettings}
+        />
+        {status}
+        <section aria-label="剧情恢复" className="game-screen__recovery">
+          <h1>{currentNode.title}</h1>
+          <p>当前行无法读取。</p>
+          <button type="button" onClick={clearRoute}>
+            返回标题
+          </button>
+        </section>
+      </main>
+    )
+  }
+
+  const isLastLine = progress.lineIndex === currentLines.length - 1
+
+  function restoreSoundFromGesture() {
+    if (save.settings.soundEnabled && !soundActive) {
+      void setSoundEnabled(true)
+    }
+  }
+
+  function handleAdvance() {
+    restoreSoundFromGesture()
+    advance()
+  }
+
+  function handleChoose(choiceId: string) {
+    restoreSoundFromGesture()
+    choose(choiceId)
+  }
+
+  return (
+    <main className="game-screen">
+      <TopBar
+        chapter={chapterLabel(currentNode.act)}
+        title={currentNode.title}
+        onOpenSettings={onOpenSettings}
+      />
+      {status}
+      <StoryStage
+        scene={currentNode.scene}
+        title={currentNode.title}
+        line={currentLine}
+        choices={isLastLine ? (currentNode.choices ?? []) : []}
+        onAdvance={handleAdvance}
+        onChoose={handleChoose}
+        textSpeed={save.settings.textSpeed}
+        reducedMotion={save.settings.reducedMotion}
+      />
+    </main>
+  )
+}
