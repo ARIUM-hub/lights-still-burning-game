@@ -1,3 +1,4 @@
+import { resolveAiProxyUrl } from './proxyUrl'
 import { validateGeneratedStory } from './storySchema'
 import type { GeneratedStory } from './types'
 
@@ -7,11 +8,10 @@ interface GenerateAiStoryOptions {
   tone?: string
 }
 
-const LOCAL_AI_PROXY_URL = 'http://127.0.0.1:8787/api/ai-story'
-
 export async function generateAiStory(
   options: GenerateAiStoryOptions,
   fetchImpl: typeof fetch = fetch,
+  proxyUrl: string = resolveAiProxyUrl(),
 ): Promise<GeneratedStory> {
   if (options.brief.trim().length === 0) {
     throw new Error('请先填写故事需求')
@@ -19,7 +19,7 @@ export async function generateAiStory(
 
   let response: Response
   try {
-    response = await fetchImpl(LOCAL_AI_PROXY_URL, {
+    response = await fetchImpl(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -27,7 +27,7 @@ export async function generateAiStory(
       body: JSON.stringify(options),
     })
   } catch {
-    throw new Error('请先启动本地 AI 服务。')
+    throw new Error('AI 故事服务暂时不可用，请稍后再试。')
   }
 
   if (!response.ok) {

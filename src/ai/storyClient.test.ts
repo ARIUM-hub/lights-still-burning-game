@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { generateAiStory } from './storyClient'
 
 describe('generateAiStory', () => {
-  it('本地代理不可达时提示先启动本地 AI 服务', async () => {
+  it('公网代理不可达时提示服务暂时不可用', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'))
 
     await expect(
@@ -14,8 +14,9 @@ describe('generateAiStory', () => {
           tone: '克制',
         },
         fetchMock as typeof fetch,
+        'https://story-proxy.up.railway.app/api/ai-story',
       ),
-    ).rejects.toThrow('请先启动本地 AI 服务。')
+    ).rejects.toThrow('AI 故事服务暂时不可用，请稍后再试。')
   })
 
   it('调用本地代理成功后返回故事对象', async () => {
@@ -83,10 +84,11 @@ describe('generateAiStory', () => {
         tone: '克制',
       },
       fetchMock as typeof fetch,
+      'https://story-proxy.up.railway.app/api/ai-story',
     )
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://127.0.0.1:8787/api/ai-story',
+      'https://story-proxy.up.railway.app/api/ai-story',
       expect.objectContaining({ method: 'POST' }),
     )
     expect(story.title).toBe('雨夜')
