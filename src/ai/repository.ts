@@ -1,20 +1,11 @@
 import { validateGeneratedStory } from './storySchema'
 import type {
-  AiConnectionConfig,
   AiStoryDraft,
   AiWorkshopState,
   GeneratedStoryProgress,
 } from './types'
 
 export const AI_WORKSHOP_KEY = 'lights-still-burning.ai-workshop'
-
-function defaultConfig(): AiConnectionConfig {
-  return {
-    baseUrl: '',
-    apiKey: '',
-    model: '',
-  }
-}
 
 function defaultDraft(): AiStoryDraft {
   return {
@@ -27,7 +18,6 @@ function defaultDraft(): AiStoryDraft {
 export function createInitialAiWorkshopState(): AiWorkshopState {
   return {
     schemaVersion: 1,
-    config: defaultConfig(),
     draft: defaultDraft(),
     latestStory: null,
     progress: null,
@@ -67,14 +57,6 @@ export function loadAiWorkshopState(): AiWorkshopState {
     const parsed: unknown = JSON.parse(raw)
     if (!isRecord(parsed)) return initial
 
-    const config = isRecord(parsed.config)
-      ? {
-          baseUrl: readString(parsed.config.baseUrl) ?? initial.config.baseUrl,
-          apiKey: readString(parsed.config.apiKey) ?? initial.config.apiKey,
-          model: readString(parsed.config.model) ?? initial.config.model,
-        }
-      : initial.config
-
     const draft = isRecord(parsed.draft)
       ? {
           brief: readString(parsed.draft.brief) ?? initial.draft.brief,
@@ -89,7 +71,6 @@ export function loadAiWorkshopState(): AiWorkshopState {
 
     return {
       schemaVersion: 1,
-      config,
       draft,
       latestStory: storyValidation.ok ? storyValidation.story : null,
       progress: readProgress(parsed.progress),

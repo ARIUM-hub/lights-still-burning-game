@@ -1,16 +1,13 @@
 import type {
-  AiConnectionConfig,
   AiStoryDraft,
   GeneratedStory,
 } from '../ai/types'
 
 interface AiWorkshopScreenProps {
-  config: AiConnectionConfig
   draft: AiStoryDraft
   latestStory: GeneratedStory | null
   busy: boolean
   error: string | null
-  onConfigChange(patch: Partial<AiConnectionConfig>): void
   onDraftChange(patch: Partial<AiStoryDraft>): void
   onGenerate(): void
   onPlayLatest(): void
@@ -18,12 +15,10 @@ interface AiWorkshopScreenProps {
 }
 
 export function AiWorkshopScreen({
-  config,
   draft,
   latestStory,
   busy,
   error,
-  onConfigChange,
   onDraftChange,
   onGenerate,
   onPlayLatest,
@@ -42,6 +37,9 @@ export function AiWorkshopScreen({
             先完整体验《灯火未熄》，再用一次低频 AI
             请求生成同类气质的新分支故事。
           </p>
+          <p className="ai-workshop-screen__hint">
+            生成新故事需要先启动本地 AI 服务。
+          </p>
         </header>
 
         {error === null ? null : (
@@ -53,49 +51,6 @@ export function AiWorkshopScreen({
             {error}
           </p>
         )}
-
-        <section
-          className="ai-workshop-screen__panel"
-          aria-labelledby="ai-connection-title"
-        >
-          <h2 id="ai-connection-title">AI连接</h2>
-          <label className="ai-workshop-screen__field">
-            <span>API 基础地址</span>
-            <input
-              aria-label="API 基础地址"
-              type="url"
-              value={config.baseUrl}
-              placeholder="https://your-endpoint.example/v1"
-              onChange={(event) =>
-                onConfigChange({ baseUrl: event.currentTarget.value })
-              }
-            />
-          </label>
-          <label className="ai-workshop-screen__field">
-            <span>模型名称</span>
-            <input
-              aria-label="模型名称"
-              type="text"
-              value={config.model}
-              placeholder="例如：gpt-4.1-mini 或兼容模型"
-              onChange={(event) =>
-                onConfigChange({ model: event.currentTarget.value })
-              }
-            />
-          </label>
-          <label className="ai-workshop-screen__field">
-            <span>API Key</span>
-            <input
-              aria-label="API Key"
-              type="password"
-              value={config.apiKey}
-              placeholder="仅保存在当前浏览器本地"
-              onChange={(event) =>
-                onConfigChange({ apiKey: event.currentTarget.value })
-              }
-            />
-          </label>
-        </section>
 
         <section
           className="ai-workshop-screen__panel"
@@ -150,7 +105,7 @@ export function AiWorkshopScreen({
             </div>
           ) : (
             <p className="ai-workshop-screen__placeholder">
-              还没有生成过新故事。填好接口信息后即可创建并直接试玩。
+              还没有生成过新故事。写好故事需求后即可创建并直接试玩。
             </p>
           )}
         </section>

@@ -1,9 +1,3 @@
-export interface AiConnectionConfig {
-  baseUrl: string
-  apiKey: string
-  model: string
-}
-
 export interface AiStoryDraft {
   brief: string
   protagonistName: string
@@ -53,7 +47,6 @@ export interface GeneratedStoryProgress {
 
 export interface AiWorkshopState {
   schemaVersion: 1
-  config: AiConnectionConfig
   draft: AiStoryDraft
   latestStory: GeneratedStory | null
   progress: GeneratedStoryProgress | null

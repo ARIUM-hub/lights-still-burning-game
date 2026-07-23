@@ -2,58 +2,74 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { generateAiStory } from './storyClient'
 
-const mockResponse = {
-  title: '未寄出的车票',
-  subtitle: '一通电话之后的长夜',
-  premise: '主角在深夜收银台和南站广播之间反复犹豫。',
-  startNodeId: 'opening',
-  nodes: [
-    {
-      id: 'opening',
-      title: '电话响起',
-      scene: '便利店玻璃门外的街灯被雨水拉长。',
-      lines: [{ text: '她说，最后一班车还有二十分钟。' }],
-      choices: [
-        { id: 'leave-now', label: '立刻离开便利店', next: 'station' },
-        { id: 'finish-shift', label: '先把手头工作做完', next: 'counter' },
-      ],
-    },
-    {
-      id: 'station',
-      title: '站台尽头',
-      scene: '广播一次次催促旅客检票。',
-      lines: [{ text: '你看见她回头时，眼里没有责怪。' }],
-      ending: {
-        id: 'station',
-        title: '站台尽头',
-        summary: '你终于赶上了见面的那一刻。',
-        epilogue: ['她没有追问迟到的原因，只把伞递过来。'],
-      },
-    },
-    {
-      id: 'counter',
-      title: '收银台白光',
-      scene: '空调风吹得门口风铃轻轻晃动。',
-      lines: [{ text: '你决定把最后一笔账单对完，再看一眼手机。' }],
-      ending: {
-        id: 'counter',
-        title: '收银台白光',
-        summary: '你留在原地，像从未准备离开。',
-        epilogue: ['当你想起要跑时，广播里的列车已经驶离。'],
-      },
-    },
-  ],
-}
-
 describe('generateAiStory', () => {
-  it('能从 OpenAI 兼容响应里提取并校验 JSON 故事', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
+  it('本地代理不可达时提示先启动本地 AI 服务', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'))
+
+    await expect(
+      generateAiStory(
+        {
+          brief: '写一个雨夜故事',
+          protagonistName: '周岚',
+          tone: '克制',
+        },
+        fetchMock as typeof fetch,
+      ),
+    ).rejects.toThrow('请先启动本地 AI 服务。')
+  })
+
+  it('调用本地代理成功后返回故事对象', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        choices: [
+      json: vi.fn().mockResolvedValue({
+        title: '雨夜',
+        subtitle: '副题',
+        premise: '前提',
+        startNodeId: 'opening',
+        nodes: [
           {
-            message: {
-              content: `\`\`\`json\n${JSON.stringify(mockResponse, null, 2)}\n\`\`\``,
+            id: 'opening',
+            title: '站台',
+            scene: '深夜站台只剩雨声和昏黄灯光。',
+            lines: [
+              { speaker: '周岚', text: '雨下得比我想的还大。' },
+              { text: '远处列车广播在空旷站台里反复回响。' },
+            ],
+            choices: [
+              {
+                id: 'wait-train',
+                label: '继续等车',
+                next: 'station',
+              },
+              {
+                id: 'go-counter',
+                label: '去值班窗口',
+                next: 'counter',
+              },
+            ],
+          },
+          {
+            id: 'station',
+            title: '末班车',
+            scene: '列车进站时带起一阵潮湿冷风。',
+            lines: [{ text: '周岚上车后，终于松开了攥紧的伞柄。' }],
+            ending: {
+              id: 'ending-last-train',
+              title: '赶上末班车',
+              summary: '你在最后一刻离开了雨夜站台。',
+              epilogue: ['车窗上的水痕慢慢模糊了整座城市。'],
+            },
+          },
+          {
+            id: 'counter',
+            title: '窗口',
+            scene: '值班窗口的灯还亮着，像专门为迟到的人留的一口气。',
+            lines: [{ text: '老值班员抬头看了她一眼，轻轻递来一杯热水。' }],
+            ending: {
+              id: 'ending-hot-water',
+              title: '灯火未熄',
+              summary: '有人在深夜里替你守住了最后一点暖意。',
+              epilogue: ['雨还在下，但站台的灯火并没有熄灭。'],
             },
           },
         ],
@@ -62,41 +78,17 @@ describe('generateAiStory', () => {
 
     const story = await generateAiStory(
       {
-        apiKey: 'test-key',
-        baseUrl: 'https://example.com/v1',
-        model: 'test-model',
+        brief: '写一个雨夜故事',
+        protagonistName: '周岚',
+        tone: '克制',
       },
-      {
-        brief: '做一个和《灯火未熄》同类的雨夜情感分支故事',
-      },
-      fetchImpl,
+      fetchMock as typeof fetch,
     )
 
-    expect(fetchImpl).toHaveBeenCalledOnce()
-    expect(story.title).toBe('未寄出的车票')
-    expect(story.startNodeId).toBe('opening')
-  })
-
-  it('当返回内容不是合法故事时抛出清晰错误', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [{ message: { content: '{"foo":"bar"}' } }],
-      }),
-    })
-
-    await expect(
-      generateAiStory(
-        {
-          apiKey: 'test-key',
-          baseUrl: 'https://example.com/v1',
-          model: 'test-model',
-        },
-        {
-          brief: '生成一个新故事',
-        },
-        fetchImpl,
-      ),
-    ).rejects.toThrow(/AI 返回的故事结构无效/)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:8787/api/ai-story',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(story.title).toBe('雨夜')
   })
 })

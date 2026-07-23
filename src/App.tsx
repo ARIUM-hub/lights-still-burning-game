@@ -229,7 +229,7 @@ function AppContent() {
     setWorkshopError(null)
 
     try {
-      const story = await generateAiStory(workshopState.config, {
+      const story = await generateAiStory({
         brief: workshopState.draft.brief,
         protagonistName: workshopState.draft.protagonistName,
         tone: workshopState.draft.tone,
@@ -343,20 +343,10 @@ function AppContent() {
   } else if (view === 'workshop') {
     content = (
       <AiWorkshopScreen
-        config={workshopState.config}
         draft={workshopState.draft}
         latestStory={generatedStory}
         busy={workshopBusy}
         error={workshopError}
-        onConfigChange={(patch) =>
-          setWorkshopState((current) => ({
-            ...current,
-            config: {
-              ...current.config,
-              ...patch,
-            },
-          }))
-        }
         onDraftChange={handleWorkshopDraftChange}
         onGenerate={handleGenerateStory}
         onPlayLatest={handlePlayLatest}
