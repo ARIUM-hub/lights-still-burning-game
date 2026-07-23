@@ -4,6 +4,7 @@
 
 - 从 GitHub 连接仓库 `ARIUM-hub/lights-still-burning-game`
 - 选择 Node 服务
+- 仓库根目录内已提供 `Dockerfile`，Railway 会优先按它启动 Node AI 代理，而不是把项目识别成纯静态 Vite 站点
 - Start Command 填：
 
 ```bash
