@@ -13,7 +13,7 @@ describe('loadAiServerConfig', () => {
     vi.stubEnv('AI_API_KEY', '')
 
     expect(() => loadAiServerConfig()).toThrowError(
-      '本地 AI 服务缺少必要配置，请检查 .env.local。',
+      'AI 服务缺少必要配置，请检查服务端环境变量。',
     )
   })
 
@@ -24,5 +24,26 @@ describe('loadAiServerConfig', () => {
     vi.stubEnv('AI_SERVER_PORT', '')
 
     expect(loadAiServerConfig().port).toBe(8787)
+  })
+
+  it('优先使用 Railway 注入的 PORT', () => {
+    vi.stubEnv('AI_BASE_URL', 'https://example.com/v1')
+    vi.stubEnv('AI_MODEL', 'test-model')
+    vi.stubEnv('AI_API_KEY', 'secret')
+    vi.stubEnv('PORT', '4312')
+    vi.stubEnv('AI_SERVER_PORT', '8787')
+
+    expect(loadAiServerConfig().port).toBe(4312)
+  })
+
+  it('暴露固定来源白名单', () => {
+    vi.stubEnv('AI_BASE_URL', 'https://example.com/v1')
+    vi.stubEnv('AI_MODEL', 'test-model')
+    vi.stubEnv('AI_API_KEY', 'secret')
+
+    expect(loadAiServerConfig().allowedOrigins).toEqual([
+      'https://arium-hub.github.io',
+      'http://localhost:5173',
+    ])
   })
 })

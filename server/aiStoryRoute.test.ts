@@ -36,7 +36,7 @@ describe('handleAiStoryRequest', () => {
       },
       {
         loadConfig: vi.fn(() => {
-          throw new Error('本地 AI 服务缺少必要配置，请检查 .env.local。')
+          throw new Error('AI 服务缺少必要配置，请检查服务端环境变量。')
         }),
         requestCompletion: vi.fn(),
         validateStory: vi.fn(),
@@ -44,6 +44,6 @@ describe('handleAiStoryRequest', () => {
     )
 
     expect(response.status).toBe(500)
-    expect(response.body).toContain('本地 AI 服务缺少必要配置')
+    expect(response.body).toContain('AI 服务缺少必要配置')
   })
 })
